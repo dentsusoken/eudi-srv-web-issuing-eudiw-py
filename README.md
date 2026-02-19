@@ -11,6 +11,15 @@ For full documentation, see the [original README](https://github.com/eu-digital-
 | origin   | https://github.com/dentsusoken/eudi-srv-web-issuing-eudiw-py |
 | upstream | https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py |
 
+### Initial setup (first-time clone)
+
+When you clone vecrea-id, the submodule only has `origin` configured. Add `upstream` before using the branch workflow:
+
+```bash
+cd projects/eudi-srv-web-issuing-eudiw-py
+git remote add upstream https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py
+```
+
 ## Working with branches
 
 ### Creating a new branch
