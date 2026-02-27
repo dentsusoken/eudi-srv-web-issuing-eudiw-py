@@ -1,71 +1,146 @@
-# EUDIW Issuer (dentsusoken fork)
+# EUDIW Issuer
 
-This is a fork of [eudi-srv-web-issuing-eudiw-py](https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py).
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-For full documentation, see the [original README](https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py/blob/main/README.md).
+**Important!** Before you proceed, please read
+the [EUDI Wallet Reference Implementation project description](https://github.com/eu-digital-identity-wallet/.github/blob/main/profile/reference-implementation.md)
 
-## How this project was created
 
-Run from the vecrea-id repository root. Create the dentsusoken fork on GitHub first.
+### Overview
 
-```bash
-cd vecrea-id
-git submodule add https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py projects/eudi-srv-web-issuing-eudiw-py
-cd projects/eudi-srv-web-issuing-eudiw-py
-git remote rename origin upstream
-git remote add origin https://github.com/dentsusoken/eudi-srv-web-issuing-eudiw-py
-git fetch upstream
-git checkout main
-git reset --hard upstream/main
-git push -u origin main
-```
+The EUDIW Issuer is an implementation of  the PID and (Q)EAA Provider service.
 
-Note: `.gitmodules` in vecrea-id was later updated to point to the dentsusoken fork. The submodule references commits (e.g. this custom README) that exist only in our fork, not in the original. GitHub uses the `.gitmodules` URL to build the submodule link, so it must point to the fork. The fork is now [public](https://github.com/dentsusoken/eudi-srv-web-issuing-eudiw-py), so the link works for everyone.
+The service provides, by default, support for `mso_mdoc` and `SD-JWT-VC`formats, for various credentials.
 
-## Remote configuration
+For authenticating the user, it requires the use of eIDAS node, OAUTH2 server or a simple form (for testing purposes).
 
-| Remote   | URL                                                       |
-|----------|-----------------------------------------------------------|
-| origin   | https://github.com/dentsusoken/eudi-srv-web-issuing-eudiw-py |
-| upstream | https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py |
 
-### Initial setup (first-time clone)
+### OpenId4VCI coverage
 
-When you clone vecrea-id, the submodule only has `origin` configured. Add `upstream` before using the branch workflow:
+This version of the EUDIW Issuer has support for the [OpenId for Verifiable Credential Issuance (Version 1.0)](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) protocol with the following coverage:
 
-```bash
-cd projects/eudi-srv-web-issuing-eudiw-py
-git remote add upstream https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py
-```
 
-## Working with branches
+| Feature                                                   | Coverage                                                        |
+|-------------------------------------------------------------------|-----------------------------------------------------------------|
+| [Authorization Code flow](https://github.com/eu-digital-identity-wallet/eudi-srv-issuer-oidc-py/blob/main/api_docs/authorization.md)        | ✅ Support for scoped                                           |
+| [Pre-authorized code flow](https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-frontend-eudiw-py/blob/main/api_docs/pre-authorized.md)            | ✅                                                              |
+| [Credential Offer](https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-frontend-eudiw-py/blob/main/api_docs/credential_offer.md)                  | ✅ `authorization_code` , ✅ `pre-authorized_code`              |
+| Dynamic Credential Request                                        | ✅                                                              |
+| mso_mdoc format                                                   | ✅                                                              |
+| SD-JWT-VC format                                                  | ✅                                                              |
+| W3C VC DM                                                         | ❌                                                              |
+| [Token Endpoint](https://github.com/eu-digital-identity-wallet/eudi-srv-issuer-oidc-py/blob/main/api_docs/token.md)                               | ✅                                                              |
+| [Credential Endpoint](api_docs/credential.md)                     | ✅                                                              |
+| Credential Issuer MetaData                                        | ✅ Unsigned metadata                                            | 
+| [Nonce endpoint](api_docs/nonce_endpoint.md)                      | ✅                                                              | 
+| [Deferred Endpoint](api_docs/deferred.md)                         | ✅ Encryption support                                           |
+| Proof                                                             | ✅ JWT, Key Attestations                                        |
+| Credential response encryption                                    | ✅                                                              |
+| Credential request encryption                                     | ✅                                                              |
+| [Notification Endpoint](api_docs/notification.md)                 | ✅                                                              |
+| Pushed authorization request                                      | ✅                                                              |
+| Wallet authentication                                             | ✅ public client, Wallet client attestations                    |
+| Demonstrating Proof of Possession (DPoP)                          | ✅                                                              |
+| PKCE                                                              | ✅                                                              |
 
-### Creating a new branch
+You can use the EUDIW Issuer at [https://issuer.eudiw.dev/](https://issuer.eudiw.dev/), or install it locally.
 
-```bash
-cd projects/eudi-srv-web-issuing-eudiw-py
-git fetch upstream
-git checkout -b <branch-name> upstream/main
-```
 
-### Updating main from upstream
+## :heavy_exclamation_mark: Disclaimer
 
-To sync `main` with the original repository:
+The released software is a initial development release version:
 
-```bash
-cd projects/eudi-srv-web-issuing-eudiw-py
-git checkout main
-git fetch upstream
-git rebase upstream/main
-```
+-   The initial development release is an early endeavor reflecting the efforts of a short timeboxed
+    period, and by no means can be considered as the final product.
+-   The initial development release may be changed substantially over time, might introduce new
+    features but also may change or remove existing ones, potentially breaking compatibility with your
+    existing code.
+-   The initial development release is limited in functional scope.
+-   The initial development release may contain errors or design flaws and other problems that could
+    cause system or other failures and data loss.
+-   The initial development release has reduced security, privacy, availability, and reliability
+    standards relative to future releases. This could make the software slower, less reliable, or more
+    vulnerable to attacks than mature software.
+-   The initial development release is not yet comprehensively documented.
+-   Users of the software must perform sufficient engineering and additional testing in order to
+    properly evaluate their application and determine whether any of the open-sourced components is
+    suitable for use in that application.
+-   We strongly recommend not putting this version of the software into production use.
+-   Only the latest version of the software will be supported
 
-### Updating a branch (other than main) from upstream
 
-To sync a branch with the latest upstream:
+## 1. Installation
 
-```bash
-cd projects/eudi-srv-web-issuing-eudiw-py
-git checkout <branch-name>
-git fetch upstream
-git rebase upstream/main
-```
+Pre-requisites:
+
++ Python v. 3.9 or 3.10
++ Flask v. 2.3 or higher
+
+Click [here](install.md) for detailed installation instructions.
+
+
+## 2. Run
+
+Click [here](install.md) for detailed instructions.
+
+## 3. Frequently Asked Questions
+
+### A. How to make your local EUDIW Issuer available on the Internet?
+
+Please see detailed instructions in [install.md](install.md#4-make-your-local-eudiw-issuer-available-on-the-internet-optional).
+
+### B. How to add a new credential to the issuer ?
+
+Please see detailed instructions in [api_docs/add_credential.md](api_docs/add_credential.md).
+
+### C. Can I use my IACA certificate with the EUDIW Issuer?
+
+Yes. You must copy your IACA trusted certificate(s) (in PEM format) to the `trusted_CAs_path` folder. If you don't have an IACA certificate, we provide an example test IACA certificate for the country Utopia (UT).
+
+See more information in [api_docs/configuration.md](api_docs/configuration.md#1-service-configuration).
+
+### D. Can I use my Document Signer private key and certificate with the EUDIW Issuer?
+
+Yes. Please follow the instructions in [api_docs/configuration.md](api_docs/configuration.md#2-configuration-of-countries). If you don't have Document Signer private key and certificate, we provide  test private DS keys and certificates, for country Utopia (UT).
+
+### E. How can I create a credential offer to issue a credential?
+
+Please see detailed instructions in [api_docs/credential_offer.md](https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-frontend-eudiw-py/blob/main/api_docs/credential_offer.md).
+
+### F. Can I test the pre-authorized flow?
+
+Yes. Please see how in [api_docs/pre-authorized.md](https://github.com/eu-digital-identity-wallet/eudi-srv-web-issuing-frontend-eudiw-py/blob/main/api_docs/pre-authorized.md).
+
+### H. Can I run the issuer in a Docker container?
+
+Yes. Please see how in [Install Docker](install.md#6-docker).
+
+### I. Where can I find reference revocation service information.
+
+Information and guides on the revocation service can be found in the following [repository](https://github.com/eu-digital-identity-wallet/eudi-srv-statuslist-py).
+
+### J. Can an external service create a credential offer?
+Yes, please see how in [Credential Offer Endpoint](api_docs/credential_offer_create.md)
+
+## How to contribute
+
+We welcome contributions to this project. To ensure that the process is smooth for everyone
+involved, follow the guidelines found in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+### License details
+
+Copyright (c) 2023 European Commission
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
