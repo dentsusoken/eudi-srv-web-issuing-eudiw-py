@@ -1,3 +1,7 @@
+include:
+  - path: ../eudi-srv-issuer-oidc-py/docker-compose.yml
+  - path: ../eudi-srv-web-issuing-frontend-eudiw-py/docker-compose.yml
+
 services:
   issuer_backend:
     image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py:latest
@@ -12,3 +16,26 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    profiles: ["base"]
+
+  issuer_backend_local:
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py:latest
+    command: flask run --host=0.0.0.0 --cert=/certs/tls/localhost+2.pem --key=/certs/tls/localhost+2-key.pem
+    ports:
+      - "5001:5000"
+    volumes:
+      - ../eudi-srv-issuer-oidc-py/script/certs/trusted_cas/:/etc/eudiw/pid-issuer-dev/cert/:ro
+      - ../eudi-srv-issuer-oidc-py/script/certs/privKey/:/etc/eudiw/pid-issuer-dev/privKey/:ro
+      - ../eudi-srv-issuer-oidc-py/script/certs/tls/localhost+2.pem:/certs/tls/localhost+2.pem:ro
+      - ../eudi-srv-issuer-oidc-py/script/certs/tls/localhost+2-key.pem:/certs/tls/localhost+2-key.pem:ro
+      - /tmp/log_dev:/tmp/log_dev
+      - ./app/metadata_config/metadata_config_local.json:/app/app/metadata_config/metadata_config.json:ro
+      - ./app/metadata_config/openid-configuration_local.json:/app/app/metadata_config/openid-configuration.json:ro
+      - ./app/route_oidc_local.py:/app/app/route_oidc.py:ro
+      - ./app/dynamic_func_local.py:/app/app/dynamic_func.py:ro
+    env_file:
+      - app/.env.local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    profiles: ["local"]
