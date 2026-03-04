@@ -1,0 +1,29 @@
+--- app/route_oidc.py	2026-03-03 09:37:56
++++ app/route_oidc_local.py	2026-03-03 09:37:37
+@@ -324,7 +324,7 @@
+ 
+     try:
+         response = requests.request(
+-            "POST", introspection_url, headers=headers, data=payload
++            "POST", introspection_url, headers=headers, data=payload, verify=False
+         )
+         response.raise_for_status()  # Raises an HTTPError for 4xx/5xx status codes
+ 
+@@ -556,7 +556,7 @@
+                     session_id=session_id, is_batch_credential=True
+                 )
+ 
+-    redirect_uri = cfgservice.service_url + "dynamic/dynamic_R2"
++    redirect_uri = "https://127.0.0.1:5000/dynamic/dynamic_R2"
+ 
+     data = {
+         "credential_requests": formatter_request,
+@@ -565,7 +565,7 @@
+ 
+     json_data = json.dumps(data)
+     headers = {"Content-Type": "application/json"}
+-    _msg = requests.post(redirect_uri, data=json_data, headers=headers).json()
++    _msg = requests.post(redirect_uri, data=json_data, headers=headers, verify=False).json()
+ 
+     return _msg
+ 

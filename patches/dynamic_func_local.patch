@@ -1,0 +1,32 @@
+--- app/dynamic_func.py	2026-03-03 09:39:54
++++ app/dynamic_func_local.py	2026-03-03 09:39:30
+@@ -32,6 +32,7 @@
+     getOptionalAttributes,
+     getOptionalAttributesSDJWT,
+ )
++import requests
+ from redirect_func import json_post
+ import base64
+ from flask import session
+@@ -71,16 +72,18 @@
+         # url = cfgserv.service_url + "formatter/cbor"
+ 
+     elif format == "dc+sd-jwt":
+-        url = cfgserv.service_url + "formatter/sd-jwt"
++        url = "https://127.0.0.1:5000/formatter/sd-jwt"
+ 
+-        r = json_post(
++        r = requests.post(
+             url,
+-            {
++            json={
+                 "country": current_session.country,
+                 "credential_metadata": requested_credential,
+                 "device_publickey": device_publickey,
+                 "data": data,
+             },
++            headers={"Content-Type": "application/json"},
++            verify=False,
+         ).json()
+ 
+         if not r["error_code"] == 0:

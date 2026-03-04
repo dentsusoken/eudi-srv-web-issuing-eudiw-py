@@ -216,3 +216,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
+# Generated local files (use generate_local.sh to recreate)
+app/metadata_config/metadata_config_local.json
+app/metadata_config/openid-configuration_local.json
+app/route_oidc_local.py
+app/dynamic_func_local.py
