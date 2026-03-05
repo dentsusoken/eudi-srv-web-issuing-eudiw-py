@@ -221,3 +221,7 @@ app/metadata_config/metadata_config_local.json
 app/metadata_config/openid-configuration_local.json
 app/route_oidc_local.py
 app/dynamic_func_local.py
+app/app_config/config_countries_local.py
+app/app_config/config_service_local.py
+app/route_dynamic_local.py
+app/formatter_func_local.py
