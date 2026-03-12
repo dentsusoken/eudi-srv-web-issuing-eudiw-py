@@ -1,0 +1,10 @@
+FROM ghcr.io/eu-digital-identity-wallet/eudi-srv-web-issuing-eudiw-py:latest
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxml2-dev \
+    libxmlsec1-dev \
+    libxmlsec1-openssl \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir python3-saml
