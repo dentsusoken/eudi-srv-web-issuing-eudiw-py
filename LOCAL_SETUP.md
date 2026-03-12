@@ -28,7 +28,10 @@ The following tools must be installed before proceeding.
 │       └── patches/
 ├── eudi-srv-web-issuing-eudiw-py/
 ├── eudi-srv-web-issuing-frontend-eudiw-py/
-└── eudi-app-ios-wallet-ui/
+├── eudi-app-ios-wallet-ui/
+└── vecrea-id/
+    └── samples/
+        └── univ-mock-idp/              ← Mock SAML IdP for university authentication
 ```
 
 ## 2. Generate `_local` files
@@ -51,12 +54,25 @@ The following will be generated:
 - `certs/verifier/keystore.jks` — Verifier keystore
 - JWK in `metadata_config_local.json` is automatically updated with the new public key
 
-## 4. Start containers
+## 4. Set `SAML_IDP_CERT` in `.env.local`
+
+After setting up the mock SAML IdP (see `vecrea-id/samples/univ-mock-idp`), copy the `SAML_IDP_CERT` value it prints and set it in `app/.env.local`:
+
+```
+SAML_IDP_CERT=<value printed by mock IdP setup>
+```
+
+> **Note:** If the mock IdP keys are regenerated, `SAML_IDP_CERT` must be updated here as well.
+
+## 5. Start containers
 
 ```bash
 cd eudi-srv-web-issuing-eudiw-py
+docker compose --profile local build
 docker compose --profile local up -d
 ```
+
+> **Note:** `docker compose build` is required on first run or after `Dockerfile.local` is changed.
 
 ---
 

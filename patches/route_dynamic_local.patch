@@ -1,0 +1,26 @@
+--- app/route_dynamic.py	2026-03-06 13:13:27
++++ app/route_dynamic_local.py	2026-03-10 12:24:48
+@@ -716,6 +716,14 @@
+     credentials_supported = oidc_metadata["credential_configurations_supported"]
+ 
+     credential_response = {"credentials": []}
++    current_session = session_manager.get_session(session_id=session_id)
++    session_user_data = current_session.user_data if current_session else {}
++
++    extra_claims = {}
++    if isinstance(session_user_data, dict):
++        maybe_extra = session_user_data.get("extra", {})
++        if isinstance(maybe_extra, dict):
++            extra_claims = maybe_extra
+ 
+     for proof in credential_request["proofs"]:
+ 
+@@ -855,6 +863,8 @@
+                 "issuing_country": country,
+             }
+         )
++        if extra_claims:
++            form_data["__extra_claims__"] = extra_claims
+ 
+         pdata = dynamic_formatter(
+             format, doctype, form_data, device_publickey, session_id

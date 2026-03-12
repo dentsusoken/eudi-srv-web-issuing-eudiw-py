@@ -1,6 +1,33 @@
---- app/route_oidc.py	2026-03-03 09:37:56
-+++ app/route_oidc_local.py	2026-03-03 09:37:37
-@@ -324,7 +324,7 @@
+--- app/route_oidc.py	2026-03-06 13:13:27
++++ app/route_oidc_local.py	2026-03-12 16:01:36
+@@ -58,7 +58,7 @@
+ import werkzeug
+ 
+ 
+-from datetime import datetime, timedelta
++from datetime import datetime, timedelta, timezone
+ 
+ #!/usr/bin/env python3
+ import requests
+@@ -235,6 +235,9 @@
+             if cred["vct"] not in credentials_requested:
+                 credentials_requested.append(vct2id(cred["vct"]))
+ 
++    existing_session = session_manager.get_session(session_id=session_id)
++    existing_user_data = existing_session.user_data if existing_session else None
++
+     session_manager.add_session(
+         session_id=session_id,
+         jws_token=token,
+@@ -242,6 +245,7 @@
+         authorization_details=authorization_details,
+         credentials_requested=credentials_requested,
+         frontend_id=frontend_id,
++        user_data=existing_user_data,
+     )
+ 
+     for cred in credentials_requested:
+@@ -324,7 +328,7 @@
  
      try:
          response = requests.request(
@@ -9,7 +36,7 @@
          )
          response.raise_for_status()  # Raises an HTTPError for 4xx/5xx status codes
  
-@@ -556,7 +556,7 @@
+@@ -556,7 +560,7 @@
                      session_id=session_id, is_batch_credential=True
                  )
  
@@ -18,7 +45,7 @@
  
      data = {
          "credential_requests": formatter_request,
-@@ -565,7 +565,7 @@
+@@ -565,7 +569,7 @@
  
      json_data = json.dumps(data)
      headers = {"Content-Type": "application/json"}
@@ -27,3 +54,204 @@
  
      return _msg
  
+@@ -1164,14 +1168,28 @@
+     )
+ 
+ 
+-@oidc.route("/credential_offer2", methods=["GET"])
++@oidc.route("/credential_offer2", methods=["GET", "POST"])
+ def credentialOffer2():
+     session_id = generate_unique_id()
+ 
+-    credential_configuration_id = request.args.get(
+-        "credential_configuration_id", "eu.europa.ec.eudi.pid_mdoc"
+-    )
++    if request.method == "POST":
++        body = request.get_json(silent=True) or {}
++        credential_configuration_id = body.get(
++            "credential_configuration_id", "eu.europa.ec.eudi.pid_mdoc"
++        )
++        extra = body.get("extra", {})
++    else:
++        credential_configuration_id = request.args.get(
++            "credential_configuration_id", "eu.europa.ec.eudi.pid_mdoc"
++        )
++        extra = {}
+ 
++    if extra:
++        session_manager.add_session(
++            session_id=session_id,
++            user_data={"extra": extra},
++        )
++
+     credential_issuer = ConfFrontend.registered_frontends[cfgservice.default_frontend][
+         "url"
+     ]
+@@ -1194,10 +1212,10 @@
+     cfgservice.app_logger.info(
+         f", Session ID: {session_id}, Credential offer successfully generated, uri: {uri}"
+     )
+-    
+-    return jsonify({"base64_img": qr_img_base64, "session_id": session_id})
+ 
++    return jsonify({"base64_img": qr_img_base64, "session_id": session_id, "uri": uri})
+ 
++
+ @oidc.route("/credential_offer_create", methods=["GET"])
+ def credentialOfferCreate():
+     session_id = generate_unique_id()
+@@ -1359,3 +1377,154 @@
+ @oidc.errorhandler(werkzeug.exceptions.BadRequest)
+ def handle_bad_request(e):
+     return "bad request!", 400
++
++
++# ----------------------------------------------------------------
++# SAML SP
++# ----------------------------------------------------------------
++from onelogin.saml2.auth import OneLogin_Saml2_Auth
++
++_UNIVERSITY_MAP = {
++    "aaa": {"credential_configuration_id": "jp.ac.aaa-university.student_id", "university_name": "AAA University"},
++    "bbb": {"credential_configuration_id": "jp.ac.bbb-university.student_id", "university_name": "BBB University"},
++    "ccc": {"credential_configuration_id": "jp.ac.ccc-university.student_id", "university_name": "CCC University"},
++}
++
++
++def _saml_settings() -> dict:
++    sp_entity_id = os.environ.get("SAML_SP_ENTITY_ID", cfgservice.service_url.rstrip("/"))
++    acs_url = os.environ.get("SAML_SP_ACS_URL", cfgservice.service_url.rstrip("/") + "/saml/acs")
++    idp_sso_url = os.environ.get("SAML_IDP_SSO_URL", "http://localhost:4000/sso")
++    idp_entity_id = os.environ.get("SAML_IDP_ENTITY_ID", "http://localhost:4000")
++    idp_cert = os.environ.get("SAML_IDP_CERT", "")
++    return {
++        "strict": True,
++        "debug": False,
++        "sp": {
++            "entityId": sp_entity_id,
++            "assertionConsumerService": {
++                "url": acs_url,
++                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
++            },
++            "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
++            "x509cert": "",
++            "privateKey": "",
++        },
++        "idp": {
++            "entityId": idp_entity_id,
++            "singleSignOnService": {
++                "url": idp_sso_url,
++                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
++            },
++            "x509cert": idp_cert,
++        },
++        "security": {
++            "wantAssertionsSigned": False,
++            "wantMessagesSigned": True,
++            "signatureAlgorithm": "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
++            "digestAlgorithm": "http://www.w3.org/2001/04/xmlenc#sha256",
++        },
++    }
++
++
++def _prepare_saml_request(req) -> dict:
++    return {
++        "https": "on" if req.scheme == "https" else "off",
++        "http_host": req.host,
++        "script_name": req.path,
++        "get_data": req.args.copy(),
++        "post_data": req.form.copy(),
++        "query_string": req.query_string,
++    }
++
++
++@oidc.route("/saml/login", methods=["GET"])
++def saml_login():
++    auth = OneLogin_Saml2_Auth(_prepare_saml_request(request), old_settings=_saml_settings())
++    return redirect(auth.login())
++
++
++@oidc.route("/saml/acs", methods=["POST"])
++def saml_acs():
++    auth = OneLogin_Saml2_Auth(_prepare_saml_request(request), old_settings=_saml_settings())
++    auth.process_response()
++    errors = auth.get_errors()
++    if errors:
++        reason = auth.get_last_error_reason()
++        return jsonify({"error": f"SAML validation failed: {errors}", "reason": reason}), 400
++    if not auth.is_authenticated():
++        return jsonify({"error": "SAML authentication failed"}), 401
++
++    raw_attrs = auth.get_attributes()
++    # python3-saml returns dict of lists; flatten to single values
++    attrs = {k: v[0] if isinstance(v, list) and v else v for k, v in raw_attrs.items()}
++
++    given_name = attrs.get("firstName", "")
++    family_name = attrs.get("lastName", "")
++    email = attrs.get("email", "")
++    enrollment_year = attrs.get("enrollment_year", "")
++    university_key = attrs.get("university", "")
++
++    mapped = _UNIVERSITY_MAP.get(university_key, {})
++    credential_configuration_id = mapped.get("credential_configuration_id", "")
++    university_name = mapped.get("university_name", "")
++
++    if not credential_configuration_id:
++        return jsonify({"error": f"Unknown university: {university_key!r}"}), 400
++
++    session_id = generate_unique_id()
++    extra = {
++        "given_name": given_name,
++        "family_name": family_name,
++        "email": email,
++        "enrollment_year": enrollment_year,
++        "university_name": university_name,
++    }
++    session_manager.add_session(session_id=session_id, user_data={"extra": extra})
++
++    credential_issuer = cfgservice.service_url.rstrip("/")
++    credential_offer = {
++        "credential_issuer": credential_issuer,
++        "credential_configuration_ids": [credential_configuration_id],
++        "grants": {"authorization_code": {"issuer_state": session_id}},
++    }
++    json_string = json.dumps(credential_offer)
++    uri = (
++        f"{cfgservice.credential_offer_scheme}credential_offer"
++        f"?credential_offer={urllib.parse.quote(json_string, safe=':/')}"
++    )
++
++    qrcode = segno.make(uri)
++    out = io.BytesIO()
++    qrcode.save(out, kind="png", scale=5)
++    qr_img_base64 = base64.b64encode(out.getvalue()).decode("utf-8")
++
++    cfgservice.app_logger.info(
++        f"SAML ACS: session_id={session_id}, credential={credential_configuration_id}"
++    )
++
++    html = f"""<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8">
++  <title>University Student Credential</title>
++  <style>
++    body {{ font-family: sans-serif; text-align: center; padding: 2rem; max-width: 480px; margin: 0 auto; }}
++    img {{ max-width: 300px; margin: 1rem auto; display: block; border: 1px solid #ddd; }}
++    .uri {{ font-size: .75rem; word-break: break-all; color: #666; }}
++    .open-wallet {{
++      display: inline-block; margin-top: 12px; padding: 10px 24px;
++      font-size: 16px; background: #0070f3; color: white;
++      border-radius: 6px; text-decoration: none;
++    }}
++  </style>
++</head>
++<body>
++  <h2>Scan with your wallet</h2>
++  <p>{given_name} {family_name} — {university_name}</p>
++  <img src="data:image/png;base64,{qr_img_base64}" alt="QR Code"/>
++  <p class="uri">{uri}</p>
++  <a href="{uri}" class="open-wallet">Open Wallet</a>
++</body>
++</html>"""
++    return make_response(html, 200)

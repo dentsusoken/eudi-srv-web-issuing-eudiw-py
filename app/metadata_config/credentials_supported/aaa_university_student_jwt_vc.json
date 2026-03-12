@@ -1,0 +1,117 @@
+{
+  "jp.ac.aaa-university.student_id": {
+    "format": "dc+sd-jwt",
+    "scope": "jp.ac.aaa-university.student_id",
+    "cryptographic_binding_methods_supported": [
+      "jwk",
+      "cose_key"
+    ],
+    "credential_signing_alg_values_supported": [
+      "ES256"
+    ],
+    "proof_types_supported": {
+      "jwt": {
+        "proof_signing_alg_values_supported": [
+          "ES256"
+        ]
+      }
+    },
+    "vct": "https://jp.ac.example-university/vct/student-id",
+    "credential_metadata": {
+      "display": [
+        {
+          "name": "University Student (SD-JWT VC)",
+          "locale": "en",
+          "logo": {
+            "uri": "https://examplestate.com/public/pid.png",
+            "alt_text": "AAA University Student Credential"
+          }
+        }
+      ],
+      "claims": [
+        {
+          "path": [
+            "given_name"
+          ],
+          "mandatory": false,
+          "value_type": "string",
+          "source": "issuer",
+          "selective_disclosure": false,
+          "display": [
+            {
+              "name": "Given Name",
+              "locale": "en"
+            }
+          ]
+        },
+        {
+          "path": [
+            "family_name"
+          ],
+          "mandatory": false,
+          "value_type": "string",
+          "source": "issuer",
+          "selective_disclosure": false,
+          "display": [
+            {
+              "name": "Family Name",
+              "locale": "en"
+            }
+          ]
+        },
+        {
+          "path": [
+            "email"
+          ],
+          "mandatory": false,
+          "value_type": "string",
+          "source": "issuer",
+          "selective_disclosure": false,
+          "display": [
+            {
+              "name": "Email Address",
+              "locale": "en"
+            }
+          ]
+        },
+        {
+          "path": [
+            "enrollment_year"
+          ],
+          "mandatory": false,
+          "value_type": "string",
+          "source": "issuer",
+          "selective_disclosure": false,
+          "display": [
+            {
+              "name": "Enrollment Year",
+              "locale": "en"
+            }
+          ]
+        },
+        {
+          "path": [
+            "university_name"
+          ],
+          "mandatory": false,
+          "value_type": "string",
+          "source": "issuer",
+          "selective_disclosure": false,
+          "display": [
+            {
+              "name": "University Name",
+              "locale": "en"
+            }
+          ]
+        }
+      ]
+    },
+    "issuer_config": {
+      "issuing_authority": "AAA University",
+      "organization_id": "jp.ac.aaa-university",
+      "validity": 365,
+      "organization_name": "AAA University Student ID Issuer",
+      "doctype": "jp.ac.aaa-university.student_id.1"
+    }
+  }
+}
