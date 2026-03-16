@@ -21,6 +21,19 @@
          )
 +        if extra_claims:
 +            form_data["__extra_claims__"] = extra_claims
- 
+
          pdata = dynamic_formatter(
              format, doctype, form_data, device_publickey, session_id
++
++@@ -1238,6 +1254,13 @@
++
++     cleaned_data = form_formatter(form_data)
++
++     # Preserve SAML extra claims if present in the existing session
++     existing_session = session_manager.get_session(session_id=session_id)
++     if existing_session and isinstance(existing_session.user_data, dict):
++         existing_extra = existing_session.user_data.get("extra")
++         if existing_extra:
++             cleaned_data["extra"] = existing_extra
++
++     session_manager.update_user_data(session_id=session_id, user_data=cleaned_data)
