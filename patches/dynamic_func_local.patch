@@ -30,14 +30,18 @@
          ).json()
  
          if not r["error_code"] == 0:
-@@ -97,6 +100,9 @@
- 
+@@ -97,6 +100,13 @@
+
  def formatter(data, un_distinguishing_sign, doctype, format):
      today = datetime.date.today()
 +    extra_claims = data.pop("__extra_claims__", {})
 +    if not isinstance(extra_claims, dict):
 +        extra_claims = {}
- 
++
++    # Merge SAML extra_claims into data so they're treated as regular form fields
++    if extra_claims:
++        data.update(extra_claims)
+
      requested_credential, pdata = get_requested_credential(data, doctype, format, today)
      doctype_config = requested_credential["issuer_config"]
 @@ -153,6 +159,9 @@
