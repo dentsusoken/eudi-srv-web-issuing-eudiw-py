@@ -1,0 +1,15 @@
+--- app/app_config/config_service.py	2026-03-06 13:13:27
++++ app/app_config/config_service_local.py	2026-03-10 12:23:38
+@@ -172,7 +172,11 @@
+             "eu.europa.ec.eudi.employee_mdoc",
+             "eu.europa.ec.eudi.pid_mdoc_deferred",
+             "eu.europa.ec.eudi.age_verification_mdoc",
+-            "eu.europa.ec.eudi.age_verification_mdoc_passport"
++            "eu.europa.ec.eudi.age_verification_mdoc_passport",
++            "jp.ac.example-university.student_id",
++            "jp.ac.aaa-university.student_id",
++            "jp.ac.bbb-university.student_id",
++            "jp.ac.ccc-university.student_id",
+         ],
+     }
+ 

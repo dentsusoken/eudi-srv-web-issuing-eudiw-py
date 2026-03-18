@@ -1,0 +1,13 @@
+--- app/app_config/config_countries.py	2026-03-06 13:13:27
++++ app/app_config/config_countries_local.py	2026-03-10 12:23:34
+@@ -143,6 +143,10 @@
+                 "eu.europa.ec.eudi.tax_residency_vc_sd_jwt",
+                 "eu.europa.ec.eudi.employee_mdoc",
+                 "eu.europa.ec.eudi.pid_mdoc_deferred",
++                "jp.ac.example-university.student_id",
++                "jp.ac.aaa-university.student_id",
++                "jp.ac.bbb-university.student_id",
++                "jp.ac.ccc-university.student_id",
+             ],
+         },
+         "PT": {
