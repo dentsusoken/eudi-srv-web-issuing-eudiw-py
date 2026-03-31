@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.local
-    command: flask run --host=0.0.0.0 --cert=/certs/tls/localhost+2.pem --key=/certs/tls/localhost+2-key.pem
+    command: flask run --host=0.0.0.0 ${FLASK_TLS_OPTS}
     ports:
       - "5001:5000"
     volumes:
