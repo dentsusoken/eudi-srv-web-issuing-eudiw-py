@@ -87,7 +87,14 @@ Replace all occurrences of `localhost:6005` with the cloud URL of AS.
 | `VERIFY_USER_ENDPOINT` | Cloud URL of AS + `/verify/user` |
 | `SAML_SP_ENTITY_ID` | Cloud URL of Issuer |
 | `SAML_SP_ACS_URL` | Cloud URL of Issuer + `/saml/acs` |
-| `FLASK_TLS_OPTS` | Leave empty |
+
+**Edit `docker-compose.yml`**
+
+Remove the TLS options from the `command` of `issuer_backend_local`.
+
+```yaml
+command: flask run --host=0.0.0.0
+```
 
 **Edit `app/metadata_config/openid-configuration_local.json`**
 
@@ -104,7 +111,14 @@ Replace all occurrences of `localhost:6005` with the cloud URL of AS.
 | `SERVICE_URL` | Cloud URL of Frontend |
 | `ISSUER_URL` | Cloud URL of Issuer |
 | `OAUTH_URL` | Cloud URL of AS |
-| `FLASK_TLS_OPTS` | Leave empty |
+
+**Edit `docker-compose.yml`**
+
+Remove the TLS options from the `command` of `issuer_frontend_local`.
+
+```yaml
+command: flask run --host=0.0.0.0
+```
 
 ## 5. Start containers
 
