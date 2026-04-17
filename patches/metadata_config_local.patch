@@ -1,5 +1,25 @@
---- /tmp/metadata_base.0t4M	2026-04-17 15:22:27
-+++ /Users/keigo/work/test-env/eudi-srv-web-issuing-eudiw-py/app/metadata_config/metadata_config_local.json	2026-04-17 15:18:41
+--- /var/folders/ty/6y86y2xn7gz_kd_rq2rt5h680000gn/T/tmp.mwWo29E4C9	2026-04-17 18:28:58
++++ app/metadata_config/metadata_config_local.json	2026-04-17 18:19:55
+@@ -1,12 +1,12 @@
+ {
+-   "credential_issuer":"https://dev.issuer.eudiw.dev",
+-   "authorization_servers":[
+-      "https://dev.issuer.eudiw.dev/oidc"
++   "credential_issuer": "https://localhost:5001",
++   "authorization_servers": [
++      "https://localhost:6005"
+    ],
+-   "credential_endpoint":"https://dev.issuer.eudiw.dev/credential",
+-   "nonce_endpoint":"https://dev.issuer.eudiw.dev/nonce",
+-   "deferred_credential_endpoint":"https://dev.issuer.eudiw.dev/deferred_credential",
+-   "notification_endpoint":"https://dev.issuer.eudiw.dev/notification",
++   "credential_endpoint": "https://localhost:5001/credential",
++   "nonce_endpoint": "https://localhost:5001/nonce",
++   "deferred_credential_endpoint": "https://localhost:5001/deferred_credential",
++   "notification_endpoint": "https://localhost:5001/notification",
+    "batch_credential_issuance":{
+       "batch_size":100
+    },
 @@ -25,42 +25,40 @@
           "A192GCM",
           "A256GCM"
