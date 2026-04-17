@@ -1,6 +1,21 @@
---- app/route_oidc.py	2026-03-06 13:13:27
-+++ app/route_oidc_local.py	2026-03-12 16:01:36
-@@ -58,7 +58,7 @@
+--- /tmp/route_oidc_base.py	2026-04-17 15:09:11
++++ /Users/keigo/work/test-env/eudi-srv-web-issuing-eudiw-py/app/route_oidc_local.py	2026-04-17 14:47:32
+@@ -29,12 +29,14 @@
+ import time
+ import uuid
+ import urllib.parse
++import logging
+ from app.redirect_func import post_redirect_with_payload
+ from app.misc import (
+     generate_unique_id,
+     scope2details,
+     vct2id,
+     verify_jwt_with_x5c,
++    verify_wua_jwt_with_x5c
+ )
+ import segno
+ 
+@@ -58,13 +60,12 @@
  import werkzeug
  
  
@@ -9,7 +24,76 @@
  
  #!/usr/bin/env python3
  import requests
-@@ -235,6 +235,9 @@
+ 
+ from .app_config.config_service import ConfService as cfgservice
+-from .app_config.config_countries import ConfFrontend
+ from . import oidc_metadata, openid_metadata, oidc_metadata_clean
+ 
+ oidc = Blueprint("oidc", __name__, url_prefix="/")
+@@ -75,37 +76,10 @@
+     credential_offer_references,
+ )
+ 
++from app import CONFIGURATION
+ 
+-@oidc.route("/.well-known/oauth-authorization-server/oidc")
+-def well_known2():
+-    info = {
+-        "response": openid_metadata,
+-        "http_headers": [
+-            ("Content-type", "application/json"),
+-            ("Pragma", "no-cache"),
+-            ("Cache-Control", "no-store"),
+-        ],
+-    }
+-
+-    _http_response_code = info.get("response_code", 200)
+-    resp = make_response(info["response"], _http_response_code)
+-
+-    for key, value in info["http_headers"]:
+-        resp.headers[key] = value
+-
+-    return resp
+-
+-
+-@oidc.route("/.well-known/oauth-authorization-server/frontend")
+-def well_known3():
+-    url = "https://dev.issuer.eudiw.dev/frontend/.well-known/oauth-authorization-server"
+-    r = requests.get(url)
++logger = logging.getLogger(__name__)
+ 
+-    return Response(
+-        r.content, status=r.status_code, content_type=r.headers.get("Content-Type")
+-    )
+-
+-
+ @oidc.route("/.well-known/<service>")
+ def well_known(service):
+     if service == "openid-credential-issuer":
+@@ -192,11 +166,11 @@
+     frontend_id = request.args.get("frontend_id")
+ 
+     if not frontend_id:
+-        frontend_id = cfgservice.default_frontend
++        frontend_id = CONFIGURATION["frontend"]["default"]
+ 
+     session["session_id"] = session_id
+ 
+-    supported_credencials = cfgservice.auth_method_supported_credencials
++    supported_credencials = CONFIGURATION["credential_auth_methods"]
+ 
+     pid_auth = True
+     country_selection = True
+@@ -209,7 +183,7 @@
+ 
+             authorization_details = json.loads(json.loads(decoded_string))
+         except json.JSONDecodeError as e:
+-            print(f"Error parsing authorization_details JSON: {e}")
++            logger.error(f"Error parsing authorization_details JSON: {e}")
+             return jsonify({"error": "Invalid authorization_details parameter"}), 400
+ 
+     credential_configuration_id = None
+@@ -235,6 +209,9 @@
              if cred["vct"] not in credentials_requested:
                  credentials_requested.append(vct2id(cred["vct"]))
  
@@ -19,7 +103,7 @@
      session_manager.add_session(
          session_id=session_id,
          jws_token=token,
-@@ -242,6 +245,7 @@
+@@ -242,6 +219,7 @@
          authorization_details=authorization_details,
          credentials_requested=credentials_requested,
          frontend_id=frontend_id,
@@ -27,7 +111,49 @@
      )
  
      for cred in credentials_requested:
-@@ -324,7 +328,7 @@
+@@ -265,22 +243,22 @@
+             pid_auth = False
+ 
+     if country_selection == False and pid_auth == True:
+-        return redirect(cfgservice.service_url + "oid4vp")
++        return redirect(f"{CONFIGURATION['service_url']}/oid4vp")
+     elif country_selection == True and pid_auth == False:
+-        return redirect(cfgservice.service_url + "dynamic/")
++        return redirect(f"{CONFIGURATION['service_url']}/dynamic/")
+ 
+     error = ""
+     if pid_auth == False and country_selection == False:
+         error = "Combination of requested credentials is not valid!"
+ 
+-    target_url = ConfFrontend.registered_frontends[frontend_id]["url"]
++    target_url = CONFIGURATION["frontend"]["frontends_config"][frontend_id]["url"]
+ 
+     return post_redirect_with_payload(
+         target_url=f"{target_url}/display_auth_method",
+         data_payload={
+             "pid_auth": pid_auth,
+             "country_selection": country_selection,
+-            "redirect_url": cfgservice.service_url,
++            "redirect_url": f"{CONFIGURATION['service_url']}/",
+             "session_id": session_id,
+         },
+     )
+@@ -316,15 +294,21 @@
+ 
+ 
+ def verify_introspection(bearer_token):
+-    introspection_url = f"{cfgservice.authorization_server_internal_url}/introspection"
+ 
++    base = (
++        CONFIGURATION["authorization_server"].get("internal_url")
++        or CONFIGURATION["authorization_server"]["base_url"]
++    )
++    
++    introspection_url = f"{base}/introspection"
++
+     payload = f"token={bearer_token}"
+ 
+     headers = {"Content-Type": "application/x-www-form-urlencoded"}
  
      try:
          response = requests.request(
@@ -36,7 +162,65 @@
          )
          response.raise_for_status()  # Raises an HTTPError for 4xx/5xx status codes
  
-@@ -556,7 +560,7 @@
+@@ -332,14 +316,14 @@
+ 
+     except requests.exceptions.RequestException as e:
+         # Error 4: Network or HTTP-level error during introspection call
+-        print(f"An error occurred during introspection request: {e}")
++        logger.error(f"An error occurred during introspection request: {e}")
+         return (
+             jsonify({"error": "Failed to validate token with the issuer."}),
+             502,
+         )  # 502 Bad Gateway is appropriate here
+     except json.JSONDecodeError:
+         # Error 5: Malformed JSON from the introspection endpoint
+-        print("Failed to decode JSON from introspection response.")
++        logger.error("Failed to decode JSON from introspection response.")
+         return (
+             jsonify({"error": "Invalid response from the introspection endpoint."}),
+             502,
+@@ -355,7 +339,7 @@
+ 
+     if not username:
+         # Error 7: Missing username in introspection response
+-        print("Token is active but missing username.")
++        logger.error("Token is active but missing username.")
+         return (
+             jsonify({"error": "invalid_token"}),
+             401,
+@@ -503,11 +487,11 @@
+                     try:
+                         header = jwt.get_unverified_header(jwt_)
+                     except jwt.DecodeError as e:
+-                        cfgservice.app_logger.info(
++                        logger.info(
+                             f", Session ID: {session_id}, invalid proof in credential request"
+                         )
+                     except Exception as e:
+-                        cfgservice.app_logger.info(
++                        logger.info(
+                             f", Session ID: {session_id}, invalid proof in credential request"
+                         )
+                         
+@@ -523,7 +507,7 @@
+                             device_key = pKfromJWT(jwt_)
+                             pubKeys.append({alg: device_key})
+                         except Exception as e:
+-                            cfgservice.app_logger.info(
++                            logger.info(
+                                     f", Session ID: {session_id}, invalid proof in credential request"
+                                 )
+                             _resp = {
+@@ -533,7 +517,7 @@
+                             return _resp 
+ 
+             else:
+-                cfgservice.app_logger.info(
++                logger.info(
+                                     f", Session ID: {session_id}, invalid proof in credential request"
+                                 )
+                 return {"error": "proof currently not supported"}
+@@ -556,7 +540,7 @@
                      session_id=session_id, is_batch_credential=True
                  )
  
@@ -45,7 +229,7 @@
  
      data = {
          "credential_requests": formatter_request,
-@@ -565,7 +569,7 @@
+@@ -565,7 +549,7 @@
  
      json_data = json.dumps(data)
      headers = {"Content-Type": "application/json"}
@@ -54,7 +238,325 @@
  
      return _msg
  
-@@ -1164,14 +1168,28 @@
+@@ -609,10 +593,12 @@
+ 
+     try:
+         public_key = JsonWebKey.import_key(encryption_config["jwk"])
+-        jwe = JsonWebEncryption()
++        jwe = JsonWebEncryption(algorithms=[_alg, encryption_config["enc"]])
++
+         jwe_token = jwe.serialize_compact(
+             protected_header, json.dumps(credential_response), public_key
+         )
++
+     except:
+         return make_response(
+             jsonify(
+@@ -640,10 +626,12 @@
+         raise ValueError("Invalid JWE format - expected 5 parts")
+ 
+     try:
+-        with open(cfgservice.credential_request_priv_key, "r") as key_file:
+-            pem_private_key = key_file.read()
++        """ with open(cfgservice.credential_request_priv_key, "r") as key_file:
++            pem_private_key = key_file.read() """
++        
++        pem_private_key = CONFIGURATION["keys"]["credential_encryption_key"]
+ 
+-        private_key = jwk.JWK.from_pem(pem_private_key.encode("utf-8"))
++        private_key = jwk.JWK.from_pem(pem_private_key)
+ 
+         jwe_token = jwe.JWE()
+         jwe_token.deserialize(jwt_token)
+@@ -651,23 +639,23 @@
+ 
+         payload = jwe_token.payload.decode("utf-8")
+ 
+-        cfgservice.app_logger.info(f"Successfully decrypted JWE payload")
++        logger.info(f"Successfully decrypted JWE payload")
+ 
+         credential_request = json.loads(payload)
+         return credential_request
+ 
+     except FileNotFoundError:
+-        cfgservice.app_logger.error(
+-            f"Private key file not found: {cfgservice.credential_request_priv_key}"
++        logger.error(
++            f"Private key file not found"
+         )
+         raise ValueError(f"Private key file not found")
+     except json.JSONDecodeError as e:
+-        cfgservice.app_logger.error(
++        logger.error(
+             f"Failed to parse decrypted payload as JSON: {str(e)}"
+         )
+         raise ValueError(f"Decrypted payload is not valid JSON: {str(e)}")
+     except Exception as e:
+-        cfgservice.app_logger.error(f"Failed to decrypt JWE: {str(e)}")
++        logger.error(f"Failed to decrypt JWE: {str(e)}")
+         raise ValueError(f"Failed to decrypt JWE: {str(e)}")
+ 
+ 
+@@ -699,20 +687,20 @@
+     if content_type == "application/jwt":
+         jwt_token = request.get_data(as_text=True)
+ 
+-        cfgservice.app_logger.info(
++        logger.info(
+             f", Started Credential Request (JWT), Token: {jwt_token}"
+         )
+ 
+         try:
+             credential_request = decrypt_jwe_credential_request(jwt_token)
+         except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, Exception) as e:
+-            cfgservice.app_logger.error(f"Failed to decrypt/verify JWT: {str(e)}")
++            logger.error(f"Failed to decrypt/verify JWT: {str(e)}")
+             return make_response(jsonify({"error": "invalid_credential_request"}), 400)
+     else:
+         # Original JSON handling
+         credential_request = request.get_json()
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Started Credential Request, Payload: {credential_request}"
+     )
+ 
+@@ -732,7 +720,7 @@
+         # If it's a tuple, it's an error response. Return it immediately.
+         return verification_result_request
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Session ID: {session_id}, Credential Request, Payload: {verification_result_request}"
+     )
+ 
+@@ -754,7 +742,7 @@
+ 
+ 
+     if "error" in _response:
+-        cfgservice.app_logger.error(
++        logger.error(
+             f", Session ID: {session_id}, Credential response with error, Payload: {_response}"
+         )
+         return jsonify(_response), 400
+@@ -777,7 +765,7 @@
+         _response = {"transaction_id": _transaction_id, "interval": 30}
+         is_deferred = True
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Session ID: {session_id}, Credential response, Payload: {_response}"
+     )
+ 
+@@ -787,7 +775,7 @@
+             credential_response=_response,
+         )
+ 
+-        cfgservice.app_logger.info(
++        logger.info(
+             f", Session ID: {session_id}, Credential encrypted response, Payload: {_response.data.decode('utf-8')}"
+         )
+ 
+@@ -797,7 +785,7 @@
+         if is_deferred:
+             return _response, 202
+ 
+-        cfgservice.app_logger.info(
++        logger.info(
+             f", Session ID: {session_id}, Credential Issuance Successful"
+         )
+         return _response, 200
+@@ -805,7 +793,7 @@
+     if is_deferred:
+         return _response, 202
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Session ID: {session_id}, Credential Issuance Successful"
+     )
+     return _response, 200
+@@ -815,7 +803,7 @@
+ def notification():
+     notification_request = request.get_json()
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Started Notification Request, Payload: {notification_request}"
+     )
+ 
+@@ -845,7 +833,7 @@
+     # If the result is not a tuple, it's the username string
+     session_id = verification_result_introspection
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Session ID: {session_id}, Notification Request, Payload: {notification_request}"
+     )
+ 
+@@ -859,17 +847,19 @@
+ def nonce():
+     clear_par()
+     protected = {"type": "cnonce+jwt", "alg": "RSA-OAEP", "enc": "A256GCM"}
+-    with open(cfgservice.nonce_key, "rb") as f:
+-        key = f.read()
++    """ with open(cfgservice.nonce_key, "rb") as f:
++        key = f.read() """
+ 
++    key = CONFIGURATION["keys"]["nonce_key"]
++
+     current_time = int(time.time())
+ 
+     payload = {
+-        "iss": cfgservice.service_url[:-1],
++        "iss": CONFIGURATION["service_url"],
+         "iat": current_time,
+         "exp": current_time + 3600,
+-        "source_endpoint": cfgservice.service_url + "nonce",
+-        "aud": [cfgservice.service_url + "credential"],
++        "source_endpoint": f"{CONFIGURATION['service_url']}/nonce",
++        "aud": [f"{CONFIGURATION['service_url']}/credential"],
+     }
+ 
+     jwe = JsonWebEncryption()
+@@ -901,14 +891,14 @@
+     if content_type == "application/jwt":
+         jwt_token = request.get_data(as_text=True)
+ 
+-        cfgservice.app_logger.info(
++        logger.info(
+             f", Started Credential Request (JWT), Token: {jwt_token}"
+         )
+ 
+         try:
+             deferred_request = decrypt_jwe_credential_request(jwt_token)
+         except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, Exception) as e:
+-            cfgservice.app_logger.error(f"Failed to decrypt/verify JWT: {str(e)}")
++            logger.error(f"Failed to decrypt/verify JWT: {str(e)}")
+             return make_response(
+                 jsonify({"error": "Invalid JWT credential request"}), 400
+             )
+@@ -925,7 +915,7 @@
+     except (ValueError, AttributeError):
+         return jsonify({"error": "invalid_transaction_id_format"}), 401
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Started Deferred Request, Transaction ID: {deferred_transaction_id}"
+     )
+ 
+@@ -955,7 +945,7 @@
+     # If the result is not a tuple, it's the username string
+     session_id = verification_result_introspection
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Session ID: {session_id}, Deferred Request, Payload: {deferred_request}"
+     )
+ 
+@@ -990,7 +980,7 @@
+     )
+ 
+     if "error" in _response:
+-        cfgservice.app_logger.error(
++        logger.error(
+             f", Session ID: {session_id}, Credential response with error, Payload: {_response}"
+         )
+         return jsonify(_response), 400
+@@ -1009,7 +999,7 @@
+         _response = {"transaction_id": deferred_transaction_id, "interval": 30}
+         is_deferred = True
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Session ID: {session_id}, Deferred credential response, Payload: {_response}"
+     )
+ 
+@@ -1022,14 +1012,14 @@
+             credential_response=_response,
+         )
+ 
+-        cfgservice.app_logger.info(
++        logger.info(
+             f", Session ID: {session_id}, Deferred credential encrypted response, Payload: {_response.data.decode('utf-8')}"
+         )
+ 
+         if is_deferred:
+             return _response, 202
+ 
+-        cfgservice.app_logger.info(
++        logger.info(
+             f", Session ID: {session_id}, Credential Issuance Successful"
+         )
+         return _response, 200
+@@ -1037,7 +1027,7 @@
+     if is_deferred:
+         return _response, 202
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         f", Session ID: {session_id}, Credential Issuance Successful"
+     )
+     return _response, 200
+@@ -1063,9 +1053,9 @@
+         if credential["format"] == "dc+sd-jwt":
+             # if credential["scope"] == "eu.europa.ec.eudiw.pid.1":
+             if (
+-                cred in cfgservice.auth_method_supported_credencials["PID_login"]
++                cred in CONFIGURATION["credential_auth_methods"]["PID_login"]
+                 or cred
+-                in cfgservice.auth_method_supported_credencials["country_selection"]
++                in CONFIGURATION["credential_auth_methods"]["country_selection"]
+             ):
+                 credentials["sd-jwt vc format"].update(
+                     # {"Personal Identification Data": cred}
+@@ -1074,27 +1064,25 @@
+ 
+         if credential["format"] == "mso_mdoc":
+             if (
+-                cred in cfgservice.auth_method_supported_credencials["PID_login"]
++                cred in CONFIGURATION["credential_auth_methods"]["PID_login"]
+                 or cred
+-                in cfgservice.auth_method_supported_credencials["country_selection"]
++                in CONFIGURATION["credential_auth_methods"]["country_selection"]
+             ):
+                 credentials["mdoc format"].update(
+                     {cred: credential["credential_metadata"]["display"][0]["name"]}
+                 )
+ 
+     if frontend_id:
+-        target_url = ConfFrontend.registered_frontends[frontend_id]["url"]
++        target_url = CONFIGURATION["frontend"]["frontends_config"][frontend_id]["url"]
+     else:
+-        target_url = ConfFrontend.registered_frontends[cfgservice.default_frontend][
+-            "url"
+-        ]
++        target_url = CONFIGURATION["frontend"]["frontends_config"][CONFIGURATION["frontend"]["default"]]["url"]
+ 
+     return post_redirect_with_payload(
+         target_url=f"{target_url}/display_credential_offer",
+         data_payload={
+             "cred": credentials,
+-            "redirect_url": cfgservice.service_url,
+-            "credential_offer_URI": cfgservice.credential_offer_scheme,
++            "redirect_url": f"{CONFIGURATION['service_url']}/",
++            "credential_offer_URI": CONFIGURATION['credential_offer_scheme']
+         },
+     )
+ 
+@@ -1130,8 +1118,11 @@
+     if not session_id:
+         return jsonify({"error": "Missing required parameter: session_id"}), 400
+ 
+-    LOG_FILES = [cfgservice.auth_log_file, cfgservice.log_file]
++    LOG_FILES = [CONFIGURATION["logging"]["backend_path"]]
+ 
++    if "authorization_server_path" in CONFIGURATION["logging"]:
++        LOG_FILES.append(CONFIGURATION["logging"]["authorization_server_path"])
++
+     matches = []
+     seen_lines = set()
+     successful = False
+@@ -1164,18 +1155,30 @@
      )
  
  
@@ -78,29 +580,113 @@
 +        )
 +        extra = {}
  
+-    credential_issuer = ConfFrontend.registered_frontends[cfgservice.default_frontend][
+-        "url"
+-    ]
 +    if extra:
 +        session_manager.add_session(
 +            session_id=session_id,
 +            user_data={"extra": extra},
 +        )
+ 
++    credential_issuer = CONFIGURATION["service_url"]
 +
-     credential_issuer = ConfFrontend.registered_frontends[cfgservice.default_frontend][
-         "url"
-     ]
-@@ -1194,10 +1212,10 @@
-     cfgservice.app_logger.info(
+     credential_offer = {
+         "credential_issuer": credential_issuer,
+         "credential_configuration_ids": [credential_configuration_id],
+@@ -1183,7 +1186,7 @@
+     }
+ 
+     json_string = json.dumps(credential_offer)
+-    uri = f"{cfgservice.credential_offer_scheme}credential_offer?credential_offer={urllib.parse.quote(json_string, safe=':/')}"
++    uri = f"{CONFIGURATION['credential_offer_scheme']}credential_offer?credential_offer={urllib.parse.quote(json_string, safe=':/')}"
+ 
+     qrcode = segno.make(uri)
+     out = io.BytesIO()
+@@ -1191,11 +1194,11 @@
+ 
+     qr_img_base64 = base64.b64encode(out.getvalue()).decode("utf-8")
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
          f", Session ID: {session_id}, Credential offer successfully generated, uri: {uri}"
      )
--    
+     
 -    return jsonify({"base64_img": qr_img_base64, "session_id": session_id})
- 
 +    return jsonify({"base64_img": qr_img_base64, "session_id": session_id, "uri": uri})
  
-+
+ 
  @oidc.route("/credential_offer_create", methods=["GET"])
- def credentialOfferCreate():
-     session_id = generate_unique_id()
-@@ -1359,3 +1377,154 @@
+@@ -1210,9 +1213,7 @@
+             "error_description": "Missing required parameter: credential_configuration_id",
+         }, 400
+ 
+-    credential_issuer = ConfFrontend.registered_frontends[cfgservice.default_frontend][
+-        "url"
+-    ]
++    credential_issuer = CONFIGURATION["service_url"]
+ 
+     credential_offer = {
+         "credential_issuer": credential_issuer,
+@@ -1252,14 +1253,7 @@
+ 
+                 session_id = generate_unique_id()
+ 
+-                if "frontend_id" in session:
+-                    credential_issuer = ConfFrontend.registered_frontends[
+-                        session["frontend_id"]
+-                    ]["url"]
+-                else:
+-                    credential_issuer = ConfFrontend.registered_frontends[
+-                        cfgservice.default_frontend
+-                    ]["url"]
++                credential_issuer = CONFIGURATION["service_url"]
+ 
+                 credential_offer = {
+                     "credential_issuer": credential_issuer,
+@@ -1273,7 +1267,7 @@
+                         reference_id: {
+                             "credential_offer": credential_offer,
+                             "expires": datetime.now()
+-                            + timedelta(minutes=cfgservice.form_expiry),
++                            + timedelta(minutes=CONFIGURATION["expiry"]["form"]),
+                         }
+                     }
+                 )
+@@ -1307,16 +1301,12 @@
+                     out.getvalue()
+                 ).decode("utf-8")
+ 
+-                wallet_url = cfgservice.wallet_test_url + "credential_offer"
++                wallet_url = f"{CONFIGURATION['wallet_tester_url']}/credential_offer"
+ 
+                 if "frontend_id" in session:
+-                    target_url = ConfFrontend.registered_frontends[
+-                        session["frontend_id"]
+-                    ]["url"]
++                    target_url = CONFIGURATION["frontend"]["frontends_config"][session["frontend_id"]]["url"]
+                 else:
+-                    target_url = ConfFrontend.registered_frontends[
+-                        cfgservice.default_frontend
+-                    ]["url"]
++                    target_url = CONFIGURATION["frontend"]["frontends_config"][CONFIGURATION["frontend"]["default"]]["url"]
+ 
+                 return post_redirect_with_payload(
+                     target_url=f"{target_url}/display_credential_offer_qr_code",
+@@ -1331,10 +1321,10 @@
+     else:
+         if "frontend_id" in session:
+             redirect(
+-                f"{cfgservice.service_url}credential_offer_choice?frontend_id={session['frontend_id']}"
++                f"{CONFIGURATION['service_url']}/credential_offer_choice?frontend_id={session['frontend_id']}"
+             )
+         else:
+-            return redirect(cfgservice.service_url + "credential_offer_choice")
++            return redirect(f"{CONFIGURATION['service_url']}/credential_offer_choice")
+ 
+ 
+ @oidc.route("/credential-offer-reference/<string:reference_id>", methods=["GET"])
+@@ -1359,3 +1349,153 @@
  @oidc.errorhandler(werkzeug.exceptions.BadRequest)
  def handle_bad_request(e):
      return "bad request!", 400
@@ -119,8 +705,8 @@
 +
 +
 +def _saml_settings() -> dict:
-+    sp_entity_id = os.environ.get("SAML_SP_ENTITY_ID", cfgservice.service_url.rstrip("/"))
-+    acs_url = os.environ.get("SAML_SP_ACS_URL", cfgservice.service_url.rstrip("/") + "/saml/acs")
++    sp_entity_id = os.environ.get("SAML_SP_ENTITY_ID", CONFIGURATION["service_url"].rstrip("/"))
++    acs_url = os.environ.get("SAML_SP_ACS_URL", CONFIGURATION["service_url"].rstrip("/") + "/saml/acs")
 +    idp_sso_url = os.environ.get("SAML_IDP_SSO_URL", "http://localhost:4000/sso")
 +    idp_entity_id = os.environ.get("SAML_IDP_ENTITY_ID", "http://localhost:4000")
 +    idp_cert = os.environ.get("SAML_IDP_CERT", "")
@@ -183,7 +769,6 @@
 +        return jsonify({"error": "SAML authentication failed"}), 401
 +
 +    raw_attrs = auth.get_attributes()
-+    # python3-saml returns dict of lists; flatten to single values
 +    attrs = {k: v[0] if isinstance(v, list) and v else v for k, v in raw_attrs.items()}
 +
 +    given_name = attrs.get("firstName", "")
@@ -209,7 +794,7 @@
 +    }
 +    session_manager.add_session(session_id=session_id, user_data={"extra": extra})
 +
-+    credential_issuer = cfgservice.service_url.rstrip("/")
++    credential_issuer = CONFIGURATION["service_url"].rstrip("/")
 +    credential_offer = {
 +        "credential_issuer": credential_issuer,
 +        "credential_configuration_ids": [credential_configuration_id],
@@ -217,7 +802,7 @@
 +    }
 +    json_string = json.dumps(credential_offer)
 +    uri = (
-+        f"{cfgservice.credential_offer_scheme}credential_offer"
++        f"{CONFIGURATION['credential_offer_scheme']}credential_offer"
 +        f"?credential_offer={urllib.parse.quote(json_string, safe=':/')}"
 +    )
 +
@@ -226,7 +811,7 @@
 +    qrcode.save(out, kind="png", scale=5)
 +    qr_img_base64 = base64.b64encode(out.getvalue()).decode("utf-8")
 +
-+    cfgservice.app_logger.info(
++    logger.info(
 +        f"SAML ACS: session_id={session_id}, credential={credential_configuration_id}"
 +    )
 +
