@@ -1,41 +1,5 @@
---- app/metadata_config/metadata_config.json	2026-03-03 15:26:19
-+++ app/metadata_config/metadata_config_local.json	2026-03-03 13:23:55
-@@ -1,23 +1,23 @@
- {
--   "credential_issuer":"https://dev.issuer.eudiw.dev",
--   "authorization_servers":[
--      "https://dev.issuer.eudiw.dev/oidc"
-+   "credential_issuer": "https://localhost:5001",
-+   "authorization_servers": [
-+      "https://localhost:6005"
-    ],
--   "credential_endpoint":"https://dev.issuer.eudiw.dev/credential",
--   "nonce_endpoint":"https://dev.issuer.eudiw.dev/nonce",
--   "deferred_credential_endpoint":"https://dev.issuer.eudiw.dev/deferred_credential",
--   "notification_endpoint":"https://dev.issuer.eudiw.dev/notification",
--   "batch_credential_issuance":{
--      "batch_size":100
-+   "credential_endpoint": "https://localhost:5001/credential",
-+   "nonce_endpoint": "https://localhost:5001/nonce",
-+   "deferred_credential_endpoint": "https://localhost:5001/deferred_credential",
-+   "notification_endpoint": "https://localhost:5001/notification",
-+   "batch_credential_issuance": {
-+      "batch_size": 100
-    },
--   "credential_response_encryption":{
--      "alg_values_supported":[
-+   "credential_response_encryption": {
-+      "alg_values_supported": [
-          "RSA1_5",
-          "RSA-OAEP",
-          "RSA-OAEP-256",
-          "ECDH-ES"
-       ],
--      "enc_values_supported":[
-+      "enc_values_supported": [
-          "A128CBC-HS256",
-          "A192CBC-HS384",
-          "A256CBC-HS512",
+--- /tmp/metadata_base.0t4M	2026-04-17 15:22:27
++++ /Users/keigo/work/test-env/eudi-srv-web-issuing-eudiw-py/app/metadata_config/metadata_config_local.json	2026-04-17 15:18:41
 @@ -25,42 +25,40 @@
           "A192GCM",
           "A256GCM"
@@ -61,9 +25,9 @@
 +               "use": "enc",
 +               "alg": "ECDH-ES",
 +               "crv": "P-256",
-+               "x": "ogG8AE3871VKn3GBm5L4skjdsgOdDY49LMWJOg8lDSw",
-+               "y": "VnM998RIcBabQhuaVKisV2z_AEvuA3M3T3p5Adxq8so",
-+               "kid": "CZnqjMLWkx1Rd5FhPHZe485WyA6CVJ7J4EKsh0OJnPs"
++               "x": "A_RURnsU_PRNskNdmwzCGHdXOLkouP9FWu9pFZvoidM",
++               "y": "hTkqv0bN0kf3m8d05luUP4mbUN7G5SyXkUkY01kXLZQ",
++               "kid": "rpMIcE7g3ehAtes-GQLql4ForY8kAmi0gpWtYwK5yWA"
              }
           ]
        },
