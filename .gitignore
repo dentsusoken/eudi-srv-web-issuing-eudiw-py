@@ -227,4 +227,5 @@ app/app_config/config_countries_local.py
 app/app_config/config_service_local.py
 app/route_dynamic_local.py
 app/formatter_func_local.py
+app/revocation_local.py
 app/config_issuer_backend_local.yaml
