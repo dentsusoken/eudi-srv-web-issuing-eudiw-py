@@ -36,6 +36,7 @@ services:
       - ./app/dynamic_func_local.py:/app/app/dynamic_func.py:ro
       - ./app/route_dynamic_local.py:/app/app/route_dynamic.py:ro
       - ./app/formatter_func_local.py:/app/app/formatter_func.py:ro
+      - ./app/revocation_local.py:/app/app/revocation.py:ro
       - ./app/app_config/config_countries_local.py:/app/app/app_config/config_countries.py:ro
       - ./app/app_config/config_service_local.py:/app/app/app_config/config_service.py:ro
       - ./app/config_issuer_backend_local.yaml:/etc/issuer_config/config_issuer_backend.yaml:ro
