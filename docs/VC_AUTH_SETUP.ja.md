@@ -1,8 +1,13 @@
-# VP認証で利用するVP種類の変更方法
+# VC認証で利用するCredentialの変更方法
 
 **[English](VP_AUTH_SETUP.md)**
 
 VC認証を利用してクレデンシャルを発行する際に、認証用に要求するVCを変更するための最短手順です。
+
+## 前提条件
+
+- Issuerの[LOCAL_SETUP](../LOCAL_SETUP.md)を実施済みであること。
+- Verifierの[LOCAL_SETUP](https://github.com/dentsusoken/eudi-srv-verifier-endpoint/blob/main/LOCAL_SETUP.md)を実施済みであること。（Verifierをローカルで起動する場合）
 
 ## 用語の整理
 
@@ -14,18 +19,17 @@ VC認証を利用してクレデンシャルを発行する際に、認証用に
 ## 実施手順（推奨順）
 
 1. 要求したいCredential IDを `credentialsSupported` に定義する（すでに定義済みの場合はスキップ）
-2. 発行させたいCredential IDだけ `PID_login` に許可する（すでに許可済みの場合はスキップ）
+2. VC認証を利用して発行させたいCredential IDだけ `PID_login` に許可する（すでに許可済みの場合はスキップ）
 3. Verifier の向け先（`dynamic_presentation_url`）を環境に合わせる（後述のセクション 3）
 4. `oid4vp_credentials_requested` をセッションまたはYAMLで指定する
 5. `issuer_backend_local` を再起動する
 
 ## 1) 要求可能なCredentialを定義する（`credentialsSupported`）
 
-生成元:
+> [!NOTE]
+> 本手順は新しい種類のCredentialを追加する場合のみ実施します。すでに定義済みのCredentialを追加する場合はスキップしてください。
 
-- `app/__init__.py` の `setup_metadata()` が `app/metadata_config/credentials_supported/*.json` を読み込み
-- `credentials_supported.update(...)` でマージ
-- `oidc_metadata["credential_configurations_supported"]` に格納
+以下の追加先に、Credential定義のJSONを追加します。
 
 追加先:
 
@@ -49,13 +53,9 @@ VC認証を利用してクレデンシャルを発行する際に、認証用に
 }
 ```
 
-`/oid4vp` が参照する主な項目:
+## 2) VC認証を利用して発行可能なCredentialを許可する（`credential_auth_methods.PID_login`）
 
-- 共通: `format`, `credential_metadata.claims`
-- `dc+sd-jwt`: `vct`
-- `mso_mdoc`: `doctype`
-
-## 2) 発行可能なVC種類を許可する（`credential_auth_methods.PID_login`）
+以下のファイルの`credential_auth_methods.PID_login`の設定項目に、VC認証を利用して発行可能なCredentialを追加します。
 
 `app/config_issuer_backend_local.yaml`:
 
@@ -66,10 +66,11 @@ credential_auth_methods:
     - jp.ac.aaa-university.student_id
 ```
 
-- ここには「発行フローで使うものだけ」を登録します。
-- `credentialsSupported` 全件登録は不要です。
-
 ## 3) Verifier の向け先（`dynamic_presentation_url`）
+
+> [!NOTE]
+> Verifier の向け先は、デフォルトでローカルのDockerで起動するVerifier BackendのURLを指定しています。
+> 必要な場合のみ変更してください。
 
 `/oid4vp` は verifier の `/ui/presentations` に対してプレゼンテーションを開始するため、`dynamic_presentation_url` でそのベースURLを指定します。
 
@@ -90,15 +91,12 @@ dynamic_presentation_url: "http://host.docker.internal:8080/ui/presentations"
 変更後は `issuer_backend_local` を再起動してください。  
 （`.env.local` の `DYNAMIC_PRESENTATION_URL` は参照されず、実際に効くのはこの YAML の値です。）
 
-## 4) `/oid4vp` で要求するVP種類を指定する
+## 4) VC認証で使用するVCの種類を指定する
 
-優先順位:
+VC認証で使用するVCの種類を指定します。
+指定方法は、Credential Offer APIのリクエスト時に指定する方法とYAMLで指定する方法の2種類があります。
 
-1. セッション値（`/credential_offer2` リクエスト）
-2. 設定ファイル値（`oid4vp_credentials_requested`）
-3. コード内固定値
-
-### A. セッションで指定（推奨）
+### A. Credential Offer APIのリクエスト時に指定
 
 `POST /credential_offer2`:
 

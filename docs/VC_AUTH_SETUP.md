@@ -14,20 +14,19 @@ Short guide for changing which credentials are **requested for authentication** 
 ## Recommended order of steps
 
 1. Define the credential IDs you want to request in `credentialsSupported` (skip if already defined)
-2. Allow only the credential IDs you want to issue after authentication under `PID_login` (skip if already allowed)
+2. Allow only the credential IDs you want to issue using **VC authentication** under `PID_login` (skip if already allowed)
 3. Point the Verifier (`dynamic_presentation_url`) at your environment (see section 3)
 4. Set `oid4vp_credentials_requested` via session or YAML
 5. Restart `issuer_backend_local`
 
 ## 1) Define requestable credentials (`credentialsSupported`)
 
-How it is built:
+> [!NOTE]
+> Run this step only when **adding a new type of credential**. If you only use credentials that are already defined, skip this step.
 
-- `setup_metadata()` in `app/__init__.py` loads `app/metadata_config/credentials_supported/*.json`
-- Entries are merged with `credentials_supported.update(...)`
-- Result is stored in `oidc_metadata["credential_configurations_supported"]`
+Add a credential definition JSON under the following path:
 
-Where to add definitions:
+Where to add:
 
 - `app/metadata_config/credentials_supported/*.json`
 
@@ -49,13 +48,9 @@ Minimal example:
 }
 ```
 
-Fields `/oid4vp` relies on:
+## 2) Allow credentials issuable via VC authentication (`credential_auth_methods.PID_login`)
 
-- Common: `format`, `credential_metadata.claims`
-- `dc+sd-jwt`: `vct`
-- `mso_mdoc`: `doctype`
-
-## 2) Allow issuable VC types (`credential_auth_methods.PID_login`)
+Under `credential_auth_methods.PID_login` in the following file, add the credentials that may be issued when using VC authentication.
 
 `app/config_issuer_backend_local.yaml`:
 
@@ -66,10 +61,11 @@ credential_auth_methods:
     - jp.ac.aaa-university.student_id
 ```
 
-- Register only credentials you use in the issuance flow.
-- You do **not** need to list every entry from `credentialsSupported`.
-
 ## 3) Verifier endpoint (`dynamic_presentation_url`)
+
+> [!NOTE]
+> By default, `dynamic_presentation_url` points at the Verifier Backend URL when running the Verifier locally in Docker.  
+> Change it only when needed.
 
 `/oid4vp` starts a presentation against the verifier’s `/ui/presentations`; set the base URL in `dynamic_presentation_url`.
 
@@ -90,15 +86,12 @@ dynamic_presentation_url: "http://host.docker.internal:8080/ui/presentations"
 Restart `issuer_backend_local` after changes.  
 (`.env.local`’s `DYNAMIC_PRESENTATION_URL` is **not** read by the app; the YAML value is what takes effect.)
 
-## 4) Choose VP types requested on `/oid4vp`
+## 4) Specify VP types requested on `/oid4vp`
 
-Precedence:
+Specify which credential types are used for VC authentication.  
+There are two ways: set them in the Credential Offer API request, or in YAML.
 
-1. Session (from `/credential_offer2` request)
-2. Config file (`oid4vp_credentials_requested`)
-3. Hard-coded fallback in code
-
-### A. Session (recommended)
+### A. Specify in the Credential Offer API request
 
 `POST /credential_offer2`:
 
