@@ -577,21 +577,36 @@
 +        credential_configuration_id = body.get(
 +            "credential_configuration_id", "eu.europa.ec.eudi.pid_mdoc"
 +        )
++        # Prefer explicit OID4VP naming to avoid confusion with VCI credential config IDs.
++        credentials_requested = body.get("oid4vp_credentials_requested")
++        if credentials_requested is None:
++            # Backward compatibility for existing callers.
++            credentials_requested = body.get("credentials_requested")
 +        extra = body.get("extra", {})
 +    else:
 +        credential_configuration_id = request.args.get(
 +            "credential_configuration_id", "eu.europa.ec.eudi.pid_mdoc"
 +        )
++        credentials_requested = None
 +        extra = {}
  
 -    credential_issuer = ConfFrontend.registered_frontends[cfgservice.default_frontend][
 -        "url"
 -    ]
-+    if extra:
-+        session_manager.add_session(
-+            session_id=session_id,
-+            user_data={"extra": extra},
-+        )
++    if not isinstance(credentials_requested, list):
++        credentials_requested = [credential_configuration_id]
++
++    credentials_requested = [
++        cred for cred in credentials_requested if isinstance(cred, str) and cred
++    ]
++    if not credentials_requested:
++        credentials_requested = [credential_configuration_id]
++
++    session_manager.add_session(
++        session_id=session_id,
++        user_data={"extra": extra} if extra else None,
++        credentials_requested=credentials_requested,
++    )
  
 +    credential_issuer = CONFIGURATION["service_url"]
 +

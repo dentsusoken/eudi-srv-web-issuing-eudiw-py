@@ -1,0 +1,219 @@
+--- /tmp/route_oid4vp_base.py	2026-05-08 04:39:38
++++ app/route_oid4vp_local.py	2026-05-08 04:21:17
+@@ -25,6 +25,7 @@
+ from datetime import date, timedelta
+ import io
+ import json
++import logging
+ import re
+ from urllib.parse import urlparse
+ from uuid import uuid4
+@@ -38,14 +39,15 @@
+ 
+ from app.validate_vp_token import validate_vp_token
+ from .app_config.config_service import ConfService as cfgservice
+-from app_config.config_countries import ConfFrontend
+ from . import session_manager
+ from . import oidc_metadata
+ 
++from app import CONFIGURATION
++
+ oid4vp = Blueprint("oid4vp", __name__, url_prefix="/")
+ CORS(oid4vp)  # enable CORS on the blue print
++logger = logging.getLogger(__name__)
+ 
+-
+ @oid4vp.route("/oid4vp", methods=["GET"])
+ def openid4vp():
+ 
+@@ -53,7 +55,7 @@
+ 
+     current_request = session_manager.get_session(session_id=session_id)
+ 
+-    cfgservice.app_logger.info(
++    logger.info(
+         ", Session ID: "
+         + session_id
+         + ", "
+@@ -66,7 +68,13 @@
+     dcql_credentials = []
+     query_id_counter = 0
+ 
+-    credentials_requested = ["eu.europa.ec.eudi.pid_mdoc"]
++    credentials_requested = (
++        current_request.credentials_requested
++        if current_request and current_request.credentials_requested
++        else CONFIGURATION.get("oid4vp_credentials_requested")
++    )
++    if not isinstance(credentials_requested, list) or not credentials_requested:
++        credentials_requested = ["eu.europa.ec.eudi.pid_mdoc"]
+ 
+     for credential_requested in credentials_requested:
+         credential_config = credentialsSupported[credential_requested]
+@@ -83,9 +91,11 @@
+             dcql_credential["meta"] = {"doctype_value": credential_config["doctype"]}
+ 
+         for claim in credential_metadata["claims"]:
+-            dcql_credential["claims"].append(
+-                {"path": claim["path"], "intent_to_retain": False}
+-            )
++            claim_entry = {"path": claim["path"]}
++            # Verifier expects intent_to_retain only for MSO mdoc formats.
++            if credential_format == "mso_mdoc":
++                claim_entry["intent_to_retain"] = False
++            dcql_credential["claims"].append(claim_entry)
+ 
+         dcql_credentials.append(dcql_credential)
+ 
+@@ -94,13 +104,13 @@
+     # Final DCQL query
+     dcql_query = {"credentials": dcql_credentials}
+ 
+-    url = cfgservice.dynamic_presentation_url
++    url = CONFIGURATION["dynamic_presentation_url"]
+     payload_cross_device = json.dumps(
+         {
+             "type": "vp_token",
+             "nonce": "hiCV7lZi5qAeCy7NFzUWSR4iCfSmRb99HfIvCkPaCLc=",
+             "dcql_query": dcql_query,
+-            "request_uri_method": "post",
++            "request_uri_method": "get",
+         }
+     )
+ 
+@@ -108,13 +118,11 @@
+         {
+             "type": "vp_token",
+             "nonce": "hiCV7lZi5qAeCy7NFzUWSR4iCfSmRb99HfIvCkPaCLc=",
+-            "request_uri_method": "post",
++            "request_uri_method": "get",
+             "dcql_query": dcql_query,
+-            "request_uri_method": "post",
+-            "dcql_query": dcql_query,
+-            "wallet_response_redirect_uri_template": cfgservice.service_url
+-            + "getpidoid4vp?response_code={RESPONSE_CODE}&session_id="
+-            + session_id,
++            # "profile": "haip",
++            # "authorization_request_uri": "haip-vp://",
++            "wallet_response_redirect_uri_template": f"{CONFIGURATION['service_url']}/getpidoid4vp?response_code={{RESPONSE_CODE}}&session_id={session_id}",
+         }
+     )
+ 
+@@ -123,11 +131,11 @@
+     }
+ 
+     response_cross = requests.request(
+-        "POST", url[:-1], headers=headers, data=payload_cross_device
++        "POST", url, headers=headers, data=payload_cross_device
+     ).json()
+ 
+     response_same = requests.request(
+-        "POST", url[:-1], headers=headers, data=payload_same_device
++        "POST", url, headers=headers, data=payload_same_device
+     ).json()
+ 
+     session_manager.update_oid4vp_transaction_id(
+@@ -136,23 +144,9 @@
+ 
+     domain = urlparse(url).netloc
+ 
+-    deeplink_url = (
+-        cfgservice.oid4vp_scheme
+-        + domain
+-        + "?client_id="
+-        + response_same["client_id"]
+-        + "&request_uri="
+-        + response_same["request_uri"]
+-    )
++    deeplink_url = f"{CONFIGURATION['oid4vp_scheme']}{domain}?client_id={response_same['client_id']}&request_uri={response_same['request_uri']}"
+ 
+-    qr_code_url = (
+-        cfgservice.oid4vp_scheme
+-        + domain
+-        + "?client_id="
+-        + response_cross["client_id"]
+-        + "&request_uri="
+-        + response_cross["request_uri"]
+-    )
++    qr_code_url = f"{CONFIGURATION['oid4vp_scheme']}{domain}?client_id={response_cross['client_id']}&request_uri={response_cross['request_uri']}"
+ 
+     # Generate QR code
+     # img = qrcode.make("uri")
+@@ -177,7 +171,7 @@
+ 
+     current_session = session_manager.get_session(session_id=session_id)
+ 
+-    target_url = ConfFrontend.registered_frontends[current_session.frontend_id]["url"]
++    target_url = CONFIGURATION["frontend"]["frontends_config"][current_session.frontend_id]["url"]
+ 
+     return post_redirect_with_payload(
+         target_url=f"{target_url}/display_pid_login",
+@@ -185,7 +179,7 @@
+             "session_id": session_id,
+             "deeplink_url": deeplink_url,
+             "qr_img_base64": qr_img_base64,
+-            "redirect_url": cfgservice.service_url,
++            "redirect_url": f"{CONFIGURATION['service_url']}/",
+             "transaction_id": response_cross["transaction_id"],
+         },
+     )
+@@ -195,7 +189,7 @@
+ def getpidoid4vp():
+ 
+     if "response_code" in request.args and "session_id" in request.args:
+-        cfgservice.app_logger.info(
++        logger.info(
+             ", Session ID: " + session["session_id"] + ", " + "oid4vp flow: same_device"
+         )
+ 
+@@ -205,10 +199,10 @@
+ 
+         presentation_id = current_session.oid4vp_transaction_id
+ 
+-        url = f"{cfgservice.dynamic_presentation_url}{presentation_id}?nonce=hiCV7lZi5qAeCy7NFzUWSR4iCfSmRb99HfIvCkPaCLc=&response_code={response_code}"
++        url = f"{CONFIGURATION['dynamic_presentation_url']}/{presentation_id}?nonce=hiCV7lZi5qAeCy7NFzUWSR4iCfSmRb99HfIvCkPaCLc=&response_code={response_code}"
+ 
+     elif "presentation_id" in request.args:
+-        cfgservice.app_logger.info(
++        logger.info(
+             f", Session ID: {session['session_id']}, oid4vp flow: cross_device"
+         )
+ 
+@@ -220,7 +214,7 @@
+         if not re.match(r"^[A-Za-z0-9_-]+$", presentation_id):
+             raise ValueError("Invalid Presentation id format")
+ 
+-        url = f"{cfgservice.dynamic_presentation_url}{presentation_id}?nonce=hiCV7lZi5qAeCy7NFzUWSR4iCfSmRb99HfIvCkPaCLc="
++        url = f"{CONFIGURATION['dynamic_presentation_url']}/{presentation_id}?nonce=hiCV7lZi5qAeCy7NFzUWSR4iCfSmRb99HfIvCkPaCLc="
+ 
+     headers = {
+         "Content-Type": "application/json",
+@@ -239,7 +233,7 @@
+     )
+ 
+     if error == True:
+-        cfgservice.app_logger.error(
++        logger.error(
+             ", Session ID: " + session_id + ", " + "OID4VP error: " + error_msg
+         )
+         raise ValueError(f"invalid_request. Session ID: {session_id}")
+@@ -284,16 +278,15 @@
+ 
+         session_manager.update_country(session_id=session_id, country="FC")
+ 
+-        target_url = ConfFrontend.registered_frontends[current_session.frontend_id][
+-            "url"
+-        ]
++        target_url = CONFIGURATION["frontend"]["frontends_config"][current_session.frontend_id]["url"]
+ 
++
+         return post_redirect_with_payload(
+             target_url=f"{target_url}/display_form",
+             data_payload={
+                 "mandatory_attributes": attributesForm,
+                 "optional_attributes": attributesForm2,
+-                "redirect_url": f"{cfgservice.service_url}dynamic/form",
++                "redirect_url": f"{CONFIGURATION['service_url']}/dynamic/form",
+                 "session_id": session_id,
+             },
+         )
