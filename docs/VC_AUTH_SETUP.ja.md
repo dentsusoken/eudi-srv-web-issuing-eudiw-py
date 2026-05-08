@@ -27,7 +27,7 @@ VC認証を利用してクレデンシャルを発行する際に、認証用に
 ## 1) 要求可能なCredentialを定義する（`credentialsSupported`）
 
 > [!NOTE]
-> 本手順は新しい種類のCredentialを追加する場合のみ実施します。すでに定義済みのCredentialを追加する場合はスキップしてください。
+> 本手順は新しい種類のCredentialを追加する場合のみ実施します。すでに定義済みのCredentialを利用する場合はスキップしてください。
 
 以下の追加先に、Credential定義のJSONを追加します。
 
