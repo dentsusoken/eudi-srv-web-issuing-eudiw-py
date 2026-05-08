@@ -229,3 +229,4 @@ app/route_dynamic_local.py
 app/formatter_func_local.py
 app/revocation_local.py
 app/config_issuer_backend_local.yaml
+app/route_oid4vp_local.py
