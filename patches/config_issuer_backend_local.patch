@@ -1,6 +1,6 @@
 --- app/config_issuer_backend_example.yaml	2026-04-17 16:59:57
 +++ /tmp/config_issuer_backend_local.yaml	2026-04-21 11:02:38
-@@ -1,87 +1,53 @@
+@@ -1,87 +1,56 @@
 -# config_issuer_backend.yaml - COMPLETE CONFIGURATION
 -# ⚠️ IMPORTANT: This file contains SECRETS - DO NOT commit to git!
 -# Add to .gitignore: config_issuer_backend.yaml, config_issuer_backend.*.yaml
@@ -55,7 +55,7 @@
 -# EXTERNAL SERVICES CONFIGURATION
 -# ============================================================================
 -#verifier url for oid4vp request generation, available at https://github.com/eu-digital-identity-wallet/eudi-srv-verifier-endpoint
-- dynamic_presentation_url: "https://verifier-backend.eudiw.dev/ui/presentations"
+-dynamic_presentation_url: "https://verifier-backend.eudiw.dev/ui/presentations"
 +dynamic_presentation_url: "http://host.docker.internal:8080/ui/presentations"
 +oid4vp_credentials_requested:
 +  - "jp.ac.aaa-university.student_id"
@@ -109,7 +109,7 @@
  credential_auth_methods:
    PID_login:
      - eu.europa.ec.eudi.pseudonym_over18_mdoc
-@@ -125,57 +91,22 @@
+@@ -125,57 +94,22 @@
      - eu.europa.ec.eudi.age_verification_mdoc
      - eu.europa.ec.eudi.age_verification_mdoc_passport
      - eu.europa.ec.eudi.learning_credential_vc_sd_jwt
@@ -176,7 +176,7 @@
      supported_credential_ids:
        - "eu.europa.ec.eudi.pid_mdoc"
        - "eu.europa.ec.eudi.pid_vc_sd_jwt"
-@@ -205,33 +136,67 @@
+@@ -205,33 +139,67 @@
        - "eu.europa.ec.eudi.employee_mdoc"
        - "eu.europa.ec.eudi.pid_mdoc_deferred"
        - "eu.europa.ec.eudi.learning_credential_vc_sd_jwt"
@@ -252,7 +252,7 @@
      auth:
        base_url: "https://country-connector.ageverification.dev"
        redirect_uri: "https://backend.issuer.eudiw.dev/dynamic/redirect"
-@@ -242,19 +207,19 @@
+@@ -242,19 +210,19 @@
  
    EE:
      name: "Estonia"
@@ -278,7 +278,7 @@
      auth:
        base_url: "https://tara-test.ria.ee"
        redirect_uri: "https://pprpid.provider.eudiw.projj.eu/tara/redirect"
-@@ -270,4 +235,4 @@
+@@ -270,4 +238,4 @@
        _default:
          family_name: "CurrentFamilyName"
          given_name: "CurrentGivenName"

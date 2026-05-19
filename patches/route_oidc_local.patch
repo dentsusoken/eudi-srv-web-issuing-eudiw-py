@@ -560,7 +560,7 @@
      matches = []
      seen_lines = set()
      successful = False
-@@ -1164,18 +1158,30 @@
+@@ -1164,18 +1158,45 @@
      )
  
  
