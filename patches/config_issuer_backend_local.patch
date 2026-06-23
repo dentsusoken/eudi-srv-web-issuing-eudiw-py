@@ -117,7 +117,9 @@
 +    - jp.ac.aaa-university.student_id
 +    - jp.ac.bbb-university.student_id
 +    - jp.ac.ccc-university.student_id
- 
++    - com.dentsusoken.academic_credit.2025.spring
++    - com.dentsusoken.academic_credit.2024.fall
+
 -# ============================================================================
 -# COUNTRIES CONFIGURATION
 -# ============================================================================
@@ -184,8 +186,10 @@
 +      - "jp.ac.aaa-university.student_id"
 +      - "jp.ac.bbb-university.student_id"
 +      - "jp.ac.ccc-university.student_id"
- 
- 
++      - "com.dentsusoken.academic_credit.2024.fall"
++      - "com.dentsusoken.academic_credit.2025.spring"
+
+
 +  EU:
 +    name: "nodeEU"
 +
