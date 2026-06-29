@@ -109,7 +109,7 @@
  credential_auth_methods:
    PID_login:
      - eu.europa.ec.eudi.pseudonym_over18_mdoc
-@@ -125,57 +94,22 @@
+@@ -125,57 +94,24 @@
      - eu.europa.ec.eudi.age_verification_mdoc
      - eu.europa.ec.eudi.age_verification_mdoc_passport
      - eu.europa.ec.eudi.learning_credential_vc_sd_jwt
@@ -119,7 +119,7 @@
 +    - jp.ac.ccc-university.student_id
 +    - com.dentsusoken.academic_credit.2025.spring
 +    - com.dentsusoken.academic_credit.2024.fall
-
+ 
 -# ============================================================================
 -# COUNTRIES CONFIGURATION
 -# ============================================================================
@@ -178,7 +178,7 @@
      supported_credential_ids:
        - "eu.europa.ec.eudi.pid_mdoc"
        - "eu.europa.ec.eudi.pid_vc_sd_jwt"
-@@ -205,33 +139,67 @@
+@@ -205,33 +139,69 @@
        - "eu.europa.ec.eudi.employee_mdoc"
        - "eu.europa.ec.eudi.pid_mdoc_deferred"
        - "eu.europa.ec.eudi.learning_credential_vc_sd_jwt"
@@ -188,8 +188,8 @@
 +      - "jp.ac.ccc-university.student_id"
 +      - "com.dentsusoken.academic_credit.2024.fall"
 +      - "com.dentsusoken.academic_credit.2025.spring"
-
-
+ 
+ 
 +  EU:
 +    name: "nodeEU"
 +
