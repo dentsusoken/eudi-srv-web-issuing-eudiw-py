@@ -121,7 +121,20 @@
  
      un_distinguishing_sign: "FC"
  
-@@ -226,9 +234,9 @@
+@@ -219,6 +227,12 @@
+       - "eu.europa.ec.eudi.employee_mdoc"
+       - "eu.europa.ec.eudi.pid_mdoc_deferred"
+       - "eu.europa.ec.eudi.learning_credential_vc_sd_jwt"
++      - "jp.ac.example-university.student_id"
++      - "jp.ac.aaa-university.student_id"
++      - "jp.ac.bbb-university.student_id"
++      - "jp.ac.ccc-university.student_id"
++      - "com.dentsusoken.academic_credit.2024.fall"
++      - "com.dentsusoken.academic_credit.2025.spring"
+ 
+ 
+   PT:
+@@ -226,9 +240,9 @@
  
      keys:
        _default:
@@ -133,7 +146,7 @@
  
      un_distinguishing_sign: "P"
  
-@@ -259,9 +267,9 @@
+@@ -259,9 +273,9 @@
  
      keys:
        _default:
