@@ -17,6 +17,23 @@ services:
     restart: unless-stopped
     profiles: ["base"]
 
+  issuer_backend_postgres_local:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: eudiw_issuer
+      POSTGRES_USER: issuer_backend
+      POSTGRES_PASSWORD: secret_here
+    volumes:
+      - issuer_backend_postgres_local_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    profiles: ["local"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U issuer_backend -d eudiw_issuer"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
   issuer_backend_local:
     build:
       context: .
@@ -48,9 +65,15 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     profiles: ["local"]
+    depends_on:
+      issuer_backend_postgres_local:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request, ssl; ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE; urllib.request.urlopen('https://localhost:5000/.well-known/openid-credential-issuer', context=ctx)"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 15s
+
+volumes:
+  issuer_backend_postgres_local_data:

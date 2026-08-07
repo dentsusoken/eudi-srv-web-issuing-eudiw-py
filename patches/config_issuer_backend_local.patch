@@ -1,35 +1,27 @@
---- app/config_issuer_backend_example.yaml	2026-04-17 16:59:57
-+++ /tmp/config_issuer_backend_local.yaml	2026-04-21 11:02:38
-@@ -1,87 +1,56 @@
--# config_issuer_backend.yaml - COMPLETE CONFIGURATION
--# ⚠️ IMPORTANT: This file contains SECRETS - DO NOT commit to git!
--# Add to .gitignore: config_issuer_backend.yaml, config_issuer_backend.*.yaml
+--- app/config_issuer_backend_example.yaml
++++ app/config_issuer_backend_local.yaml
+@@ -5,15 +5,15 @@
+ # ============================================================================
+ # SERVICE CONFIGURATION
+ # ============================================================================
+-service_url: "https://backend.issuer.eudiw.dev"
 +service_url: "https://localhost:5001"
  
--# ============================================================================
--# SERVICE CONFIGURATION
--# ============================================================================
--service_url: "https://backend.issuer.eudiw.dev"
--  
 -wallet_tester_url: "https://tester.issuer.eudiw.dev"
 +wallet_tester_url: "https://localhost:6007"
  
  revocation:
    take_url: "https://issuer.eudiw.dev/token_status_list/take"
 -  set_url: https://issuer.eudiw.dev/token_status_list/set
--  api_key: "secret"  # SECRET
--  enabled: true
 +  set_url: "https://issuer.eudiw.dev/token_status_list/set"
-+  api_key: "secret"
+   api_key: "secret"  # SECRET
+-  enabled: true
 +  enabled: false
  
--# ============================================================================
--# FRONTEND CONFIGURATION
--# ============================================================================
- frontend:
-   default: "5d725b3c-6d42-448e-8bfd-1eff1fcf152d"
--  
-+
+ # ============================================================================
+ # FRONTEND CONFIGURATION
+@@ -23,9 +23,9 @@
+ 
    frontends_config:
      "5d725b3c-6d42-448e-8bfd-1eff1fcf152d":
 -      url: "https://issuer.eudiw.dev"
@@ -40,10 +32,10 @@
 +      metadata_access_certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0001_UT_cert.pem"
        metadata_signing_key_password: null
  
--# ============================================================================
--# ISSUER AUTHORIZATION SERVER CONFIGURATION
--# ============================================================================
--
+ # ============================================================================
+@@ -33,23 +33,25 @@
+ # ============================================================================
+ 
  authorization_server:
 -  base_url: "https://backend.issuer.eudiw.dev/oidc"
 -  user_verify_endpoint: "https://issuer.eudiw.dev/oidc/verify/user"
@@ -51,9 +43,9 @@
 +  internal_url: "https://issuer_oidc_local:5000"
 +  user_verify_endpoint: "https://localhost:6005/verify/user"
  
--# ============================================================================
--# EXTERNAL SERVICES CONFIGURATION
--# ============================================================================
+ # ============================================================================
+ # EXTERNAL SERVICES CONFIGURATION
+ # ============================================================================
 -#verifier url for oid4vp request generation, available at https://github.com/eu-digital-identity-wallet/eudi-srv-verifier-endpoint
 -dynamic_presentation_url: "https://verifier-backend.eudiw.dev/ui/presentations"
 +dynamic_presentation_url: "http://host.docker.internal:8080/ui/presentations"
@@ -62,54 +54,37 @@
 +  - "eu.europa.ec.eudi.pid_mdoc"
  
 -# WUA trust validator url, available at https://github.com/eu-digital-identity-wallet/eudi-srv-trust-validator
--trust_validator:  
-+trust_validator:
+ trust_validator:
    url: "https://trust-validator.eudiw.dev/trust"
 -  enabled: true
 +  enabled: false
  
--# ============================================================================
--# SCHEMA CONFIGURATION
--# ============================================================================
- oid4vp_scheme: "haip-vp://"
+ status_validator:
+   url: "https://status-validator.issuer.eudiw.dev/status"
+-  enabled: true
++  enabled: false
  
- credential_offer_scheme: "haip-vci://"
- 
--# ============================================================================
--# LOGGING
--# ============================================================================
+ # ============================================================================
+ # SCHEMA CONFIGURATION
+@@ -62,7 +64,7 @@
+ # POSTGRES CONFIGURATION
+ # ============================================================================
+ postgres:
+-  host: "localhost"
++  host: "issuer_backend_postgres_local"
+   port: 5432
+   dbname: "eudiw_issuer"
+   user: "issuer_backend"
+@@ -72,7 +74,7 @@
+ # LOGGING
+ # ============================================================================
  logging:
 -  backend_path: "/tmp/log_prod/logs.log"
 +  backend_path: "/tmp/log_dev/logs.log"
    log_level: "INFO"
  
--# ============================================================================
--# EXPIRY TIMES (minutes)
--# ============================================================================
- expiry:
-   revocation_code: 60
-   form: 60
-   session: 60
- 
--# ============================================================================
--# KEY PATHS
--# ============================================================================
- keys:
--  nonce_path: "/etc/eudiw/pid-issuer-dev/privKey/nonce_rsa2048.pem" # Private key that signs the nonce at the nonce enpoint. 
--  credential_request_path: "/etc/eudiw/pid-issuer-dev/privKey/credential_request.pem" # Private key used for credential request encryption. Metadata advertised public key is automatically generated from this private key.
-+  nonce_path: "/etc/eudiw/pid-issuer-dev/privKey/nonce_rsa2048.pem"
-+  credential_request_path: "/etc/eudiw/pid-issuer-dev/privKey/credential_request.pem"
- 
--# Path to trusted CA certificates, used to validate VP_Tokens
- trusted_CAs_path: "/etc/eudiw/pid-issuer-dev/cert/"
- 
--# ============================================================================
--# CREDENTIALS AUTHENTICATION METHODS CONFIGURATION
--# ============================================================================
- credential_auth_methods:
-   PID_login:
-     - eu.europa.ec.eudi.pseudonym_over18_mdoc
-@@ -125,57 +94,24 @@
+ # ============================================================================
+@@ -139,6 +141,12 @@
      - eu.europa.ec.eudi.age_verification_mdoc
      - eu.europa.ec.eudi.age_verification_mdoc_passport
      - eu.europa.ec.eudi.learning_credential_vc_sd_jwt
@@ -120,172 +95,53 @@
 +    - com.dentsusoken.academic_credit.2025.spring
 +    - com.dentsusoken.academic_credit.2024.fall
  
--# ============================================================================
--# COUNTRIES CONFIGURATION
--# ============================================================================
--
--# Currently only _default is supported for both keys and custom_modifiers
--# Eventually keys will be separated by frontend and custom_modifiers per credential_configuration_id
--# Connection types supported: oauth or openid
--
- countries:
--  EU:
--    name: "nodeEU"
--
--    # Keys and certificates
--    keys:
--      _default:
+ # ============================================================================
+ # COUNTRIES CONFIGURATION
+@@ -155,9 +163,9 @@
+     # Keys and certificates
+     keys:
+       _default:
 -        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0002_EU.pem"
--        private_key_password: null 
++        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0001_UT.pem"
+         private_key_password: null
 -        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0002_EU_cert.der"
--
--    supported_credential_ids:
--      - "eu.europa.ec.eudi.pid_mdoc"
--      - "eu.europa.ec.eudi.pid_vc_sd_jwt"
--      - "eu.europa.ec.eudi.pid_mdoc_deferred"
--    
--    custom_modifiers:
--      _default:
--        family_name: "CurrentFamilyName"
--        given_name: "CurrentGivenName"
--        birth_date: "DateOfBirth"
--    
--    connection_type: "oauth"
--    
--    auth:
--      base_url: "https://eidas.projj.eu"
--      redirect_uri: "https://backend.issuer.eudiw.dev/dynamic/redirect"
--      scope: "profile"
--      response_type: "code"
--      client_id: "example"
--      client_secret: "example"
--
-   FC:
--    name: "FormEU"    
-+    name: "FormEU"
++        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0001_UT_cert.der"
+ 
+     supported_credential_ids:
+       - "eu.europa.ec.eudi.pid_mdoc"
+@@ -184,9 +192,9 @@
+     name: "FormEU"
      keys:
        _default:
 -        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0002_UT.pem"
 +        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0001_UT.pem"
          private_key_password: null
 -        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0002_UT_cert.der"
--    
 +        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0001_UT_cert.der"
-+
+ 
      un_distinguishing_sign: "FC"
--    
-+
-     supported_credential_ids:
-       - "eu.europa.ec.eudi.pid_mdoc"
-       - "eu.europa.ec.eudi.pid_vc_sd_jwt"
-@@ -205,33 +139,69 @@
-       - "eu.europa.ec.eudi.employee_mdoc"
-       - "eu.europa.ec.eudi.pid_mdoc_deferred"
-       - "eu.europa.ec.eudi.learning_credential_vc_sd_jwt"
-+      - "jp.ac.example-university.student_id"
-+      - "jp.ac.aaa-university.student_id"
-+      - "jp.ac.bbb-university.student_id"
-+      - "jp.ac.ccc-university.student_id"
-+      - "com.dentsusoken.academic_credit.2024.fall"
-+      - "com.dentsusoken.academic_credit.2025.spring"
  
+@@ -226,9 +234,9 @@
  
-+  EU:
-+    name: "nodeEU"
-+
-+    keys:
-+      _default:
-+        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0001_UT.pem"
-+        private_key_password: null
-+        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0001_UT_cert.der"
-+
-+    supported_credential_ids:
-+      - "eu.europa.ec.eudi.pid_mdoc"
-+      - "eu.europa.ec.eudi.pid_vc_sd_jwt"
-+      - "eu.europa.ec.eudi.pid_mdoc_deferred"
-+
-+    custom_modifiers:
-+      _default:
-+        family_name: "CurrentFamilyName"
-+        given_name: "CurrentGivenName"
-+        birth_date: "DateOfBirth"
-+
-+    connection_type: "oauth"
-+
-+    auth:
-+      base_url: "https://eidas.projj.eu"
-+      redirect_uri: "https://backend.issuer.eudiw.dev/dynamic/redirect"
-+      scope: "profile"
-+      response_type: "code"
-+      client_id: "example"
-+      client_secret: "example"
-+
-   PT:
-     name: "Portugal"
--    
-+
      keys:
        _default:
 -        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0002_PT.pem"
 +        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0001_UT.pem"
          private_key_password: null
 -        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0002_PT_cert.der"
--    
 +        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0001_UT_cert.der"
-+
-     un_distinguishing_sign: "P"
--    
-+
-     supported_credential_ids:
-       - "eu.europa.ec.eudi.pid_mdoc"
-       - "eu.europa.ec.eudi.pid_vc_sd_jwt"
-       - "eu.europa.ec.eudi.mdl_mdoc"
-       - "eu.europa.ec.eudi.pid_mdoc_deferred"
--    
-+
-     connection_type: "oauth"
--    
-+
-     custom_modifiers:
-       _default:
-         "http://interop.gov.pt/MDC/Cidadao/DataNascimento": "birth_date"
-         "http://interop.gov.pt/MDC/Cidadao/NomeApelido": "family_name"
-         "http://interop.gov.pt/MDC/Cidadao/NomeProprio": "given_name"
--    
-+
-     auth:
-       base_url: "https://country-connector.ageverification.dev"
-       redirect_uri: "https://backend.issuer.eudiw.dev/dynamic/redirect"
-@@ -242,19 +210,19 @@
  
-   EE:
-     name: "Estonia"
--    
-+
+     un_distinguishing_sign: "P"
+ 
+@@ -259,9 +267,9 @@
+ 
      keys:
        _default:
 -        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0002_EE.pem"
 +        private_key_path: "/etc/eudiw/pid-issuer-dev/privKey/PID-DS-0001_UT.pem"
          private_key_password: null
 -        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0002_EE_cert.der"
--    
 +        certificate_path: "/etc/eudiw/pid-issuer-dev/cert/PID-DS-0001_UT_cert.der"
-+
+ 
      supported_credential_ids:
        - "eu.europa.ec.eudi.pid_mdoc"
-       - "eu.europa.ec.eudi.pid_vc_sd_jwt"
--    
-+
-     connection_type: "openid"
--    
-+
-     auth:
-       base_url: "https://tara-test.ria.ee"
-       redirect_uri: "https://pprpid.provider.eudiw.projj.eu/tara/redirect"
-@@ -270,4 +238,4 @@
-       _default:
-         family_name: "CurrentFamilyName"
-         given_name: "CurrentGivenName"
--        birth_date: "date_of_birth"
-\ No newline at end of file
-+        birth_date: "date_of_birth"
