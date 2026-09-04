@@ -33,7 +33,7 @@
        metadata_signing_key_password: null
  
  # ============================================================================
-@@ -33,23 +33,25 @@
+@@ -33,26 +33,28 @@
  # ============================================================================
  
  authorization_server:
@@ -52,6 +52,9 @@
 +oid4vp_credentials_requested:
 +  - "jp.ac.aaa-university.student_id"
 +  - "eu.europa.ec.eudi.pid_mdoc"
+ # at least one of 'intended_use_id' or 'registration_certificate_jwt' must be defined
+ intended_use_id:
+ registration_certificate_jwt:
  
 -# WUA trust validator url, available at https://github.com/eu-digital-identity-wallet/eudi-srv-trust-validator
  trust_validator:
@@ -66,7 +69,7 @@
  
  # ============================================================================
  # SCHEMA CONFIGURATION
-@@ -62,7 +64,7 @@
+@@ -65,7 +67,7 @@
  # POSTGRES CONFIGURATION
  # ============================================================================
  postgres:
@@ -75,7 +78,7 @@
    port: 5432
    dbname: "eudiw_issuer"
    user: "issuer_backend"
-@@ -72,7 +74,7 @@
+@@ -75,7 +77,7 @@
  # LOGGING
  # ============================================================================
  logging:
@@ -84,7 +87,7 @@
    log_level: "INFO"
  
  # ============================================================================
-@@ -139,6 +141,12 @@
+@@ -142,6 +144,12 @@
      - eu.europa.ec.eudi.age_verification_mdoc
      - eu.europa.ec.eudi.age_verification_mdoc_passport
      - eu.europa.ec.eudi.learning_credential_vc_sd_jwt
@@ -97,7 +100,7 @@
  
  # ============================================================================
  # COUNTRIES CONFIGURATION
-@@ -155,9 +163,9 @@
+@@ -158,9 +166,9 @@
      # Keys and certificates
      keys:
        _default:
@@ -109,7 +112,7 @@
  
      supported_credential_ids:
        - "eu.europa.ec.eudi.pid_mdoc"
-@@ -184,9 +192,9 @@
+@@ -187,9 +195,9 @@
      name: "FormEU"
      keys:
        _default:
@@ -121,7 +124,7 @@
  
      un_distinguishing_sign: "FC"
  
-@@ -219,6 +227,12 @@
+@@ -222,6 +230,12 @@
        - "eu.europa.ec.eudi.employee_mdoc"
        - "eu.europa.ec.eudi.pid_mdoc_deferred"
        - "eu.europa.ec.eudi.learning_credential_vc_sd_jwt"
@@ -134,7 +137,7 @@
  
  
    PT:
-@@ -226,9 +240,9 @@
+@@ -229,9 +243,9 @@
  
      keys:
        _default:
@@ -146,7 +149,7 @@
  
      un_distinguishing_sign: "P"
  
-@@ -259,9 +273,9 @@
+@@ -262,9 +276,9 @@
  
      keys:
        _default:
